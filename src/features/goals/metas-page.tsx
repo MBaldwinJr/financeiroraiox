@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatBRL, fromCents, MONTH_LABELS, toCents } from "@/lib/money";
+import { formatBRL, MONTH_LABELS, toCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { deleteGoal, listGoals, upsertGoal } from "@/features/goals/goals.functions";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
