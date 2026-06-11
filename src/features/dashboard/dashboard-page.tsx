@@ -31,10 +31,16 @@ import {
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
+import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TopList } from "@/components/charts/top-list";
+import { TreemapChart } from "@/components/charts/treemap-chart";
+import { Heatmap } from "@/components/charts/heatmap";
+import { Waterfall } from "@/components/charts/waterfall";
 import { formatBRL, formatBRLCompact, fromCents, MONTH_LABELS } from "@/lib/money";
+
 
 const EXPENSE_LABELS: Record<string, string> = {
   cmv: "CMV",
