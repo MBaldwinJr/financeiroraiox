@@ -27,6 +27,7 @@ const FilterSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
   search: z.string().max(200).optional(),
+  kind: z.enum(KINDS).nullable().optional(),
   categoryIds: z.array(z.string().uuid()).optional(),
   costCenterIds: z.array(z.string().uuid()).optional(),
   bankAccountIds: z.array(z.string().uuid()).optional(),
@@ -70,6 +71,7 @@ export const listTransactions = createServerFn({ method: "POST" })
       .range(data.offset, data.offset + data.limit - 1);
 
     if (data.search) q = q.ilike("description", `%${data.search}%`);
+    if (data.kind) q = q.eq("kind", data.kind);
     if (data.categoryIds?.length) q = q.in("category_id", data.categoryIds);
     if (data.costCenterIds?.length) q = q.in("cost_center_id", data.costCenterIds);
     if (data.bankAccountIds?.length) q = q.in("bank_account_id", data.bankAccountIds);

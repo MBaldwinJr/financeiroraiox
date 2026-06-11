@@ -188,6 +188,53 @@ export type Database = {
           },
         ]
       }
+      goals: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["goal_kind"]
+          month: number
+          notes: string | null
+          target_cents: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["goal_kind"]
+          month: number
+          notes?: string | null
+          target_cents?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["goal_kind"]
+          month?: number
+          notes?: string | null
+          target_cents?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parties: {
         Row: {
           company_id: string
@@ -358,6 +405,7 @@ export type Database = {
         | "variable"
         | "operational"
         | "other"
+      goal_kind: "revenue" | "profit" | "expense_cap"
       party_kind: "client" | "supplier" | "both"
       payment_method: "cash" | "pix" | "boleto" | "cheque" | "card"
       tx_kind: "revenue" | "expense"
@@ -501,6 +549,7 @@ export const Constants = {
         "operational",
         "other",
       ],
+      goal_kind: ["revenue", "profit", "expense_cap"],
       party_kind: ["client", "supplier", "both"],
       payment_method: ["cash", "pix", "boleto", "cheque", "card"],
       tx_kind: ["revenue", "expense"],
