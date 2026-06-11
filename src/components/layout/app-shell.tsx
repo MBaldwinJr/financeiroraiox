@@ -122,6 +122,51 @@ function Sidebar() {
   );
 }
 
+type NavItem = { to: string; label: string; icon: typeof ChartLine };
+
+function NavSection({
+  title,
+  items,
+  path,
+}: {
+  title: string;
+  items: ReadonlyArray<NavItem>;
+  path: string;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {title}
+      </p>
+      {items.map((item) => {
+        const active = path === item.to || path.startsWith(item.to + "/");
+        return (
+          <Link
+            key={item.to}
+            to={item.to as never}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              active
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
+            {active && (
+              <motion.span
+                layoutId="active-indicator"
+                className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+              />
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+
 function Topbar() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-md lg:px-8">
