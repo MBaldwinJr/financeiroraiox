@@ -108,32 +108,12 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-2">
-        {NAV.map((item) => {
-          const active = path === item.to || path.startsWith(item.to + "/");
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-              {active && (
-                <motion.span
-                  layoutId="active-indicator"
-                  className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
-                />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+        <NavSection title="Principal" items={NAV_MAIN} path={path} />
+        <div className="my-3 h-px bg-sidebar-border" />
+        <NavSection title="Operações" items={NAV_OPS} path={path} />
       </nav>
+
 
       <div className="border-t border-sidebar-border p-3">
         <UserMenu />
