@@ -43,15 +43,12 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       throw new Error('Unauthorized: No token provided');
     }
 
-    const supabase = createClient<Database>(
+    // Auth-only client: used exclusively to validate the token (getClaims).
+    // It must NOT use the accessToken option, which disables supabase.auth.*.
+    const authClient = createClient<Database>(
       SUPABASE_URL!,
       SUPABASE_PUBLISHABLE_KEY!,
       {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
         auth: {
           storage: undefined,
           persistSession: false,
@@ -60,7 +57,17 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       }
     );
 
-    const { data, error } = await supabase.auth.getClaims(token);
+    // Data client: accessToken guarantees the user's JWT is attached to every
+    // PostgREST request so RLS policies see auth.uid().
+    const supabase = createClient<Database>(
+      SUPABASE_URL!,
+      SUPABASE_PUBLISHABLE_KEY!,
+      {
+        accessToken: async () => token,
+      }
+    );
+
+    const { data, error } = await authClient.auth.getClaims(token);
     if (error || !data?.claims) {
       throw new Error('Unauthorized: Invalid token');
     }
