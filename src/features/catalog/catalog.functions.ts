@@ -4,24 +4,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CompanyIdSchema = z.object({ companyId: z.string().uuid() });
 
-async function assertMember(
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> },
-  companyId: string,
-  userId: string,
-) {
-  const { data, error } = await supabase.rpc("is_company_member", {
-    _company_id: companyId,
-    _user_id: userId,
-  });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Acesso negado a esta empresa.");
-}
-
 export const listCategories = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CompanyIdSchema.parse(input))
   .handler(async ({ context, data }) => {
-    await assertMember(context.supabase, data.companyId, context.userId);
     const { data: rows, error } = await context.supabase
       .from("categories")
       .select("id, name, kind, dre_group, parent_id")
