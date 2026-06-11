@@ -27,6 +27,7 @@ const FilterSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
   search: z.string().max(200).optional(),
+  kind: z.enum(KINDS).nullable().optional(),
   categoryIds: z.array(z.string().uuid()).optional(),
   costCenterIds: z.array(z.string().uuid()).optional(),
   bankAccountIds: z.array(z.string().uuid()).optional(),
