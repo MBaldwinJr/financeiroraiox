@@ -82,6 +82,14 @@ export function DashboardPage() {
     enabled: !!companyId,
   });
 
+  const analyticsFetcher = useServerFn(getAnalytics);
+  const analyticsQuery = useQuery({
+    queryKey: ["analytics", companyId, range.year, range.month],
+    queryFn: () =>
+      analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month } }),
+    enabled: !!companyId,
+  });
+
   if (!companyId) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -89,6 +97,7 @@ export function DashboardPage() {
       </div>
     );
   }
+
 
   if (query.isLoading || !query.data) {
     return <div className="text-sm text-muted-foreground">Carregando dados financeiros…</div>;
