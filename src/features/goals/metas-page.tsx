@@ -304,6 +304,3 @@ function GoalDialog() {
     </Dialog>
   );
 }
-
-// Avoid unused import warning when fromCents not used directly
-void fromCents;
