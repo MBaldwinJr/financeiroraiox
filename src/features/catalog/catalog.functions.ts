@@ -21,7 +21,6 @@ export const listCostCenters = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CompanyIdSchema.parse(input))
   .handler(async ({ context, data }) => {
-    await assertMember(context.supabase, data.companyId, context.userId);
     const { data: rows, error } = await context.supabase
       .from("cost_centers")
       .select("id, name, color")
@@ -35,7 +34,6 @@ export const listBankAccounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CompanyIdSchema.parse(input))
   .handler(async ({ context, data }) => {
-    await assertMember(context.supabase, data.companyId, context.userId);
     const { data: rows, error } = await context.supabase
       .from("bank_accounts")
       .select("id, name, type, initial_balance_cents, color")
@@ -49,7 +47,6 @@ export const listParties = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CompanyIdSchema.parse(input))
   .handler(async ({ context, data }) => {
-    await assertMember(context.supabase, data.companyId, context.userId);
     const { data: rows, error } = await context.supabase
       .from("parties")
       .select("id, name, kind, document")
