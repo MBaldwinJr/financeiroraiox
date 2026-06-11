@@ -47,7 +47,6 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       SUPABASE_URL!,
       SUPABASE_PUBLISHABLE_KEY!,
       {
-        accessToken: async () => token,
         global: {
           headers: {
             Authorization: `Bearer ${token}`,
