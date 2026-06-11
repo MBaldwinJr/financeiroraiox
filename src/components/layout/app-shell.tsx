@@ -71,7 +71,8 @@ const NAV_OPS = [
   { to: "/raio-x", label: "Raio-X Financeiro", icon: GaugeIcon },
   { to: "/lancamentos", label: "Lançamentos", icon: ListChecks },
   { to: "/cadastros", label: "Cadastros", icon: BookOpen },
-  { to: "/importar", label: "Importar", icon: Upload },
+  { to: "/importar", label: "Importar Planilha", icon: Upload },
+  { to: "/importar-erp", label: "Importar PDF ERP", icon: FileText },
 ] as const;
 
 
