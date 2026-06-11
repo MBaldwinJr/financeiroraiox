@@ -83,13 +83,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Plataforma profissional de gestão financeira, DRE dinâmico e Business Intelligence para empresas.",
       },
-      { property: "og:title", content: "Finance Vision Pro" },
+      { property: "og:title", content: "Finance Vision Pro — Gestão Financeira & DRE" },
       {
         property: "og:description",
         content: "Dashboard executivo, DRE dinâmico e análises financeiras em tempo real.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Finance Vision Pro — Gestão Financeira & DRE" },
+      { name: "description", content: "Finance Vision Pro is a modern SaaS platform for business financial management, DRE reporting, and BI." },
+      { property: "og:description", content: "Finance Vision Pro is a modern SaaS platform for business financial management, DRE reporting, and BI." },
+      { name: "twitter:description", content: "Finance Vision Pro is a modern SaaS platform for business financial management, DRE reporting, and BI." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/22a81009-d910-494b-b687-b81d1e7de03d/id-preview-dd4769e7--ddd280ef-a069-4fdd-af81-32cc7be680ee.lovable.app-1781206225733.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/22a81009-d910-494b-b687-b81d1e7de03d/id-preview-dd4769e7--ddd280ef-a069-4fdd-af81-32cc7be680ee.lovable.app-1781206225733.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
