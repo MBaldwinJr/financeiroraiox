@@ -15,6 +15,14 @@ import {
   Building2,
   ChevronDown,
   ChartLine,
+  TrendingUp,
+  TrendingDown,
+  Waves,
+  Target,
+  FileText,
+  Sparkles,
+  Activity,
+  Gauge as GaugeIcon,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
@@ -44,16 +52,28 @@ import { listMyCompanies, createCompany } from "@/features/companies/companies.f
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-const NAV = [
+const NAV_MAIN = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/dre", label: "DRE", icon: FileBarChart },
-  { to: "/lancamentos", label: "Lançamentos", icon: ListChecks },
-  { to: "/contas", label: "Contas Bancárias", icon: Wallet },
+  { to: "/fluxo-caixa", label: "Fluxo de Caixa", icon: Waves },
+  { to: "/receitas", label: "Receitas", icon: TrendingUp },
+  { to: "/despesas", label: "Despesas", icon: TrendingDown },
   { to: "/centros-custos", label: "Centros de Custos", icon: Layers },
-  { to: "/cadastros", label: "Cadastros", icon: BookOpen },
-  { to: "/importar", label: "Importar", icon: Upload },
+  { to: "/contas", label: "Contas Bancárias", icon: Wallet },
+  { to: "/metas", label: "Metas", icon: Target },
+  { to: "/relatorios", label: "Relatórios", icon: FileText },
+  { to: "/analises", label: "Análises", icon: Activity },
+  { to: "/ia", label: "IA Financeira", icon: Sparkles },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
+
+const NAV_OPS = [
+  { to: "/raio-x", label: "Raio-X Financeiro", icon: GaugeIcon },
+  { to: "/lancamentos", label: "Lançamentos", icon: ListChecks },
+  { to: "/cadastros", label: "Cadastros", icon: BookOpen },
+  { to: "/importar", label: "Importar", icon: Upload },
+] as const;
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -88,32 +108,12 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-2">
-        {NAV.map((item) => {
-          const active = path === item.to || path.startsWith(item.to + "/");
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-              {active && (
-                <motion.span
-                  layoutId="active-indicator"
-                  className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
-                />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+        <NavSection title="Principal" items={NAV_MAIN} path={path} />
+        <div className="my-3 h-px bg-sidebar-border" />
+        <NavSection title="Operações" items={NAV_OPS} path={path} />
       </nav>
+
 
       <div className="border-t border-sidebar-border p-3">
         <UserMenu />
@@ -121,6 +121,51 @@ function Sidebar() {
     </aside>
   );
 }
+
+type NavItem = { to: string; label: string; icon: typeof ChartLine };
+
+function NavSection({
+  title,
+  items,
+  path,
+}: {
+  title: string;
+  items: ReadonlyArray<NavItem>;
+  path: string;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {title}
+      </p>
+      {items.map((item) => {
+        const active = path === item.to || path.startsWith(item.to + "/");
+        return (
+          <Link
+            key={item.to}
+            to={item.to as never}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              active
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
+            {active && (
+              <motion.span
+                layoutId="active-indicator"
+                className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+              />
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 
 function Topbar() {
   return (

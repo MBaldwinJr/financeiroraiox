@@ -1,105 +1,68 @@
+# Finance Vision BI
 
-# Finance Vision Pro — Plano MVP
+Transformar o app atual em uma suíte de BI financeiro estilo Power BI, com tema dark premium, múltiplos dashboards interativos, DRE dinâmica, IA financeira e Raio-X com gauge de saúde.
 
-Sistema SaaS de gestão financeira com tema escuro premium, multiempresa, DRE dinâmico e dashboard executivo. Esta entrega cobre a base sólida; módulos avançados (IA, Alertas, Dashboard Analítico Premium, Heatmap, PWA, Metas, Relatórios PDF) ficam para iterações seguintes.
+Como o escopo é grande, proponho entregar em **5 fases**. Cada fase fica utilizável sozinha; você revisa antes de eu seguir para a próxima.
 
-## Escopo desta entrega (MVP)
+---
 
-1. **Autenticação + Multiempresa**
-   - Login email/senha + Google (via Lovable Cloud)
-   - Cada usuário pode criar/pertencer a múltiplas empresas (tenants)
-   - Seletor de empresa no topo da sidebar; todos os dados filtrados por empresa ativa
-   - Roles por empresa: `owner`, `admin`, `member` (RBAC via tabela `user_roles` + função `has_role`)
+## Fase 1 — Fundação visual e navegação
 
-2. **Dashboard Executivo (Módulo 1)**
-   - Cards KPI: Receita Bruta, CMV, Lucro Bruto, Total Recebimentos, Total Despesas, Resultado Operacional, Lucro Líquido, Margem %
-   - Cada card: valor do mês, variação vs mês anterior (↑↓ + %), sparkline
-   - Gráficos: Receita x Despesa (barras), Evolução do Lucro (linha), Composição de Despesas (donut), Recebimentos por Forma de Pagamento (pizza), Fluxo de Caixa Mensal (área), Comparativo Ano Atual x Anterior (barras agrupadas)
+- Aplicar tema **Dark Premium** nos design tokens (`src/styles.css`):
+  - `--background #111827`, `--card #1F2937`, `--success #22C55E`, `--destructive #EF4444`, `--primary #3B82F6`, bordas sutis, sombras suaves.
+  - Utilitários para glassmorphism leve (`backdrop-blur`, borda translúcida).
+- Reformular a **Sidebar** (shadcn) com os 12 menus: Dashboard, DRE, Fluxo de Caixa, Receitas, Despesas, Centros de Custos, Contas Bancárias, Metas, Relatórios, Análises, IA Financeira, Configurações.
+- Barra superior de **Filtros Globais** (Zustand store): ano, mês, período custom, categoria, conta, forma de pagamento, centro de custo, botão "Limpar".
+- Instalar `framer-motion` para microanimações (fade/scale nos cards).
 
-3. **DRE Dinâmico (Módulo 2)**
-   - Tabela interativa por mês/ano com hierarquia: Receitas (Dinheiro, PIX, Boletos, Cheques, Cartões) → Despesas (Fornecedores, Fretes, Fixas [Aluguel, Energia, Água, Internet, Pró-labore], Variáveis [Combustível, Veículos, Comissões, Descontos, Empréstimos], Operacional, Outras)
-   - Cálculos automáticos: Receita Líquida, CMV, Lucro Bruto, Totais, Resultado Operacional, Lucro Líquido, Margem %
-   - Visualização mensal (12 colunas) + total anual
+## Fase 2 — Dashboard Executivo
 
-4. **Lançamentos (Módulo 7)**
-   - Tabela ERP-like: data, descrição, categoria, subcategoria, conta, centro de custo, forma de pagamento, cliente/fornecedor, valor, tipo (receita/despesa), situação, observações
-   - Ações: criar, editar, excluir, duplicar, dar baixa, busca instantânea, paginação
-   - Form com React Hook Form + Zod
+- **8 KPI cards** com sparkline (Recharts) e variação vs mês anterior: Receita Líquida, CMV, Lucro Bruto, Despesas Fixas, Despesas Variáveis, Resultado Operacional, Lucro Líquido, Margem %.
+- **Linha 1**: Receita x Despesa (barras 12 meses) + Evolução do Lucro (linha receita/despesa/lucro).
+- **Linha 2**: Donut Composição de Despesas (Fixas/Variáveis/CMV) + Treemap de Categorias.
+- **Linha 3**: Top 10 Despesas + Top 10 Fornecedores + Heatmap Categorias × Meses (verde/amarelo/vermelho).
+- **Waterfall** Receita → CMV → Lucro Bruto → Fixas → Variáveis → Operacional → Líquido.
 
-5. **Filtros Avançados (Módulo 3)**
-   - Período (ano, mês, intervalo), categoria, centro de custo, forma de pagamento, conta, cliente, fornecedor
-   - Estado global via Zustand; gráficos e DRE reagem instantaneamente
-   - Botão "Limpar filtros"
+## Fase 3 — DRE, Fluxo de Caixa, Centros de Custo, Indicadores
 
-6. **Cadastros básicos**
-   - Categorias e subcategorias (com seed padrão na criação da empresa)
-   - Centros de custo (Administrativo, Comercial, Oficina, Estoque, Logística, Marketing, Outros) — seed inicial
-   - Contas bancárias (cadastro simples com saldo inicial; saldo atual = inicial + somatório de lançamentos baixados)
-   - Clientes e fornecedores (cadastro simples)
-   - Formas de pagamento (enum fixo: Dinheiro, PIX, Boleto, Cheque, Cartão)
+- **DRE interativa**: tabela pivot meses × linhas (Receitas, CMV, Lucro Bruto, Fixas, Variáveis, Operacional, Líquido) + Total anual, expandir/recolher categorias.
+- **Fluxo de Caixa**: gráfico de área acumulada (entradas, saídas, saldo).
+- **Centro de Custos**: pizza (Administrativo, Comercial, Estoque, Filial, Marketing, Logística, Outros).
+- **Indicadores Financeiros**: cards automáticos (melhor mês, pior mês, maior despesa, maior fornecedor, média mensal, ticket médio, margem média, lucro acumulado, EBITDA, EBITDA %, ponto de equilíbrio).
 
-7. **Importação CSV/Excel**
-   - Upload de arquivo, mapeamento de colunas, preview, validação Zod, inserção em lote
-   - Template de exemplo para download
+## Fase 4 — Raio-X Financeiro
 
-8. **Design System Dark Premium**
-   - Tokens em `src/styles.css`: bg `#111827`, cards `#1F2937`, accent verde/vermelho/azul/cinza (convertidos para oklch)
-   - Sidebar estilo Power BI com itens: Dashboard, DRE, Lançamentos, Contas, Centros de Custos, Cadastros, Importar, Configurações
-   - Glassmorphism sutil, cards arredondados, animações Framer Motion discretas, totalmente responsivo
+- Página dedicada com **score 0–100** (🟢/🟡/🔴) calculado a partir de: crescimento da receita, margem líquida, peso de despesas fixas, CMV, fluxo de caixa, lucro acumulado.
+- **Gauge Chart** (Recharts RadialBar) estilo executivo + breakdown por critério com recomendações.
 
-## Arquitetura técnica
+## Fase 5 — IA Financeira (Copiloto)
 
-**Stack:** TanStack Start + React + TypeScript + Tailwind v4 + shadcn/ui + Recharts + Framer Motion + TanStack Query + Zustand + RHF + Zod + Lovable Cloud (Supabase).
+- Página de chat com Lovable AI Gateway (`google/gemini-3-flash-preview`).
+- ServerFn que monta um contexto com agregados da DRE do ano corrente e envia junto ao prompt.
+- Sugestões prontas: "Por que meu lucro caiu em março?", "Qual categoria mais cresceu?", "Quanto gastei com Marketing no trimestre?", "Qual foi meu melhor mês?", "Quais despesas posso reduzir?".
+- Renderização markdown das respostas.
 
-**Camadas (Clean Architecture):**
-```
-src/
-  features/
-    dashboard/   (components, hooks, services)
-    dre/
-    transactions/
-    accounts/
-    cost-centers/
-    parties/        (clients + suppliers)
-    categories/
-    import/
-    companies/      (multi-tenant)
-  components/ui/    (shadcn)
-  components/layout/ (Sidebar, AppShell, CompanySwitcher)
-  lib/              (formatters, date utils, calculations)
-  services/         (server functions wrappers)
-  stores/           (zustand: filters, active company)
-  routes/
-    _authenticated/
-      dashboard.tsx
-      dre.tsx
-      transactions.tsx
-      accounts.tsx
-      cost-centers.tsx
-      cadastros.{categories,parties}.tsx
-      importar.tsx
-      configuracoes.tsx
-    auth.tsx
-    index.tsx       (landing/redirect)
-```
+---
 
-**Acesso a dados:** componentes → hooks (TanStack Query) → server functions (`createServerFn` com `requireSupabaseAuth`) → Supabase. Cálculos do DRE feitos no servidor para garantir consistência.
+## Detalhes técnicos
 
-## Modelo de dados (Supabase, snake_case, UUIDs, RLS)
+- **Stack**: TanStack Start + React 19 + TS estrito + Tailwind v4 + shadcn + Recharts + Framer Motion + TanStack Query + Zustand + Supabase (já configurado).
+- **Dados**: criar `src/features/analytics/analytics.functions.ts` com serverFns autenticadas (`requireSupabaseAuth`) que retornam agregados por mês/categoria/centro/fornecedor a partir de `transactions`, `categories`, `cost_centers`, `parties`. Mapeamento de `dre_group` já existente (`cmv`, `fixed`, `variable`, `operational`, `revenue`, `supplier`, `freight`, `other`).
+- **Filtros globais**: Zustand store; cada chart faz `useSuspenseQuery` keyed pelos filtros.
+- **Estrutura de pastas** (seguindo convenções do projeto):
+  ```text
+  src/features/
+    dashboard/  dre/  cashflow/  cost-centers/  indicators/
+    raio-x/     ai-copilot/      analytics/ (services compartilhados)
+  src/components/charts/ (KPI, Sparkline, Waterfall, Heatmap, Treemap, Gauge)
+  src/stores/filters-store.ts
+  ```
+- **Rotas** (`src/routes/_authenticated/...`): `dashboard.tsx`, `dre.tsx`, `fluxo-caixa.tsx`, `centros-custos.tsx`, `indicadores.tsx`, `raio-x.tsx`, `ia.tsx` etc.
+- **Performance**: `React.memo` nos charts, agregações no servidor, queries paginadas onde aplicável.
+- **Acessibilidade**: aria-labels nos charts, contraste WCAG AA garantido no tema dark.
 
-- `companies` (id, name, owner_id, created_at, updated_at)
-- `user_roles` (user_id, company_id, role: owner|admin|member) — função `has_role(user_id, company_id, role)` security definer
-- `bank_accounts` (id, company_id, name, type, initial_balance_cents, created_at)
-- `cost_centers` (id, company_id, name, color)
-- `categories` (id, company_id, name, parent_id nullable, kind: revenue|expense, dre_group)
-- `parties` (id, company_id, name, kind: client|supplier|both, document)
-- `transactions` (id, company_id, date, description, amount_cents, kind: revenue|expense, payment_method, category_id, cost_center_id, bank_account_id, party_id, status: pending|paid, paid_at, notes, created_by, created_at, updated_at, deleted_at)
-- `attachments` (futuro)
+---
 
-Valores monetários em **inteiros (centavos)**. Soft delete via `deleted_at`. RLS: usuário só vê linhas onde `has_role(auth.uid(), company_id, any)`. Mutations escrevem `company_id` da empresa ativa. Índices em `(company_id, date)`, `(company_id, category_id)`.
+## Confirmação
 
-## Fora de escopo (próximas iterações)
-
-- Módulo 9 Metas, Módulo 10 Relatórios (PDF/Excel export), Módulo 11 IA Copiloto, Módulo 12 Dashboard Analítico Premium (heatmap, calendário, score), Módulo 13 Alertas, PWA instalável, conciliação bancária, anexos em lançamentos, Insights avançados (EBITDA, ponto de equilíbrio).
-
-Após aprovar o MVP, te aviso para escolher qual módulo avançar primeiro.
+Posso começar pela **Fase 1 (fundação visual + sidebar + filtros globais)** já neste turno? Ou prefere ajustar a ordem / paleta / escopo de alguma fase antes?

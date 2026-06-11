@@ -31,10 +31,16 @@ import {
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
+import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TopList } from "@/components/charts/top-list";
+import { TreemapChart } from "@/components/charts/treemap-chart";
+import { Heatmap } from "@/components/charts/heatmap";
+import { Waterfall } from "@/components/charts/waterfall";
 import { formatBRL, formatBRLCompact, fromCents, MONTH_LABELS } from "@/lib/money";
+
 
 const EXPENSE_LABELS: Record<string, string> = {
   cmv: "CMV",
@@ -76,6 +82,14 @@ export function DashboardPage() {
     enabled: !!companyId,
   });
 
+  const analyticsFetcher = useServerFn(getAnalytics);
+  const analyticsQuery = useQuery({
+    queryKey: ["analytics", companyId, range.year, range.month],
+    queryFn: () =>
+      analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month } }),
+    enabled: !!companyId,
+  });
+
   if (!companyId) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -83,6 +97,7 @@ export function DashboardPage() {
       </div>
     );
   }
+
 
   if (query.isLoading || !query.data) {
     return <div className="text-sm text-muted-foreground">Carregando dados financeiros…</div>;
@@ -378,9 +393,85 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+
+      {analyticsQuery.data && (
+        <>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Top 10 Despesas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.topExpenses} accent="danger" />
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Top 10 Fornecedores</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.topSuppliers} accent="info" />
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Centros de Custos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.byCostCenter.slice(0, 10)} accent="success" />
+              </CardContent>
+            </Card>
+          </section>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Participação das Categorias</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <TreemapChart data={analyticsQuery.data.categoryTreemap} />
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Heatmap Financeiro — Categorias × Meses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Heatmap rows={analyticsQuery.data.heatmap} />
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Waterfall do Resultado</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <Waterfall
+                steps={[
+                  { label: "Receita", value: query.data.kpis.grossRevenue },
+                  { label: "(-) CMV", value: -query.data.kpis.cmv },
+                  { label: "Lucro Bruto", value: query.data.kpis.grossProfit, total: true },
+                  { label: "(-) Fixas", value: -query.data.expenseComposition.fixed },
+                  { label: "(-) Variáveis", value: -query.data.expenseComposition.variable },
+                  {
+                    label: "Result. Operacional",
+                    value: query.data.kpis.operatingResult,
+                    total: true,
+                  },
+                  { label: "(-) Outras", value: -query.data.expenseComposition.other },
+                  { label: "Lucro Líquido", value: query.data.kpis.netProfit, total: true },
+                ]}
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
+
 
 const tooltipStyle = {
   background: "oklch(0.18 0.02 260)",
