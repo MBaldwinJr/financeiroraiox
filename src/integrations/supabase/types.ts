@@ -188,6 +188,54 @@ export type Database = {
           },
         ]
       }
+      erp_account_mappings: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          created_at: string
+          default_kind: string | null
+          erp_code: string
+          erp_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          default_kind?: string | null
+          erp_code: string
+          erp_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          default_kind?: string | null
+          erp_code?: string
+          erp_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_account_mappings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_account_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           company_id: string

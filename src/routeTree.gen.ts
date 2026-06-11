@@ -17,6 +17,7 @@ import { Route as AuthenticatedReceitasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedRaioXRouteImport } from './routes/_authenticated/raio-x'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenticated/lancamentos'
+import { Route as AuthenticatedImportarErpRouteImport } from './routes/_authenticated/importar-erp'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
 import { Route as AuthenticatedFluxoCaixaRouteImport } from './routes/_authenticated/fluxo-caixa'
@@ -67,6 +68,12 @@ const AuthenticatedLancamentosRoute =
   AuthenticatedLancamentosRouteImport.update({
     id: '/lancamentos',
     path: '/lancamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedImportarErpRoute =
+  AuthenticatedImportarErpRouteImport.update({
+    id: '/importar-erp',
+    path: '/importar-erp',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/importar-erp': typeof AuthenticatedImportarErpRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/raio-x': typeof AuthenticatedRaioXRoute
@@ -160,6 +168,7 @@ export interface FileRoutesByTo {
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/importar-erp': typeof AuthenticatedImportarErpRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/raio-x': typeof AuthenticatedRaioXRoute
@@ -182,6 +191,7 @@ export interface FileRoutesById {
   '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
+  '/_authenticated/importar-erp': typeof AuthenticatedImportarErpRoute
   '/_authenticated/lancamentos': typeof AuthenticatedLancamentosRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/raio-x': typeof AuthenticatedRaioXRoute
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/fluxo-caixa'
     | '/ia'
     | '/importar'
+    | '/importar-erp'
     | '/lancamentos'
     | '/metas'
     | '/raio-x'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/fluxo-caixa'
     | '/ia'
     | '/importar'
+    | '/importar-erp'
     | '/lancamentos'
     | '/metas'
     | '/raio-x'
@@ -245,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authenticated/fluxo-caixa'
     | '/_authenticated/ia'
     | '/_authenticated/importar'
+    | '/_authenticated/importar-erp'
     | '/_authenticated/lancamentos'
     | '/_authenticated/metas'
     | '/_authenticated/raio-x'
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/lancamentos'
       fullPath: '/lancamentos'
       preLoaderRoute: typeof AuthenticatedLancamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/importar-erp': {
+      id: '/_authenticated/importar-erp'
+      path: '/importar-erp'
+      fullPath: '/importar-erp'
+      preLoaderRoute: typeof AuthenticatedImportarErpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/importar': {
@@ -408,6 +428,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
+  AuthenticatedImportarErpRoute: typeof AuthenticatedImportarErpRoute
   AuthenticatedLancamentosRoute: typeof AuthenticatedLancamentosRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedRaioXRoute: typeof AuthenticatedRaioXRoute
@@ -428,6 +449,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
+  AuthenticatedImportarErpRoute: AuthenticatedImportarErpRoute,
   AuthenticatedLancamentosRoute: AuthenticatedLancamentosRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedRaioXRoute: AuthenticatedRaioXRoute,
@@ -446,13 +468,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
