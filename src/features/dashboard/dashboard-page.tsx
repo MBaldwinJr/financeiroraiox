@@ -393,9 +393,85 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+
+      {analyticsQuery.data && (
+        <>
+          <section className="grid gap-4 lg:grid-cols-3">
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Top 10 Despesas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.topExpenses} accent="danger" />
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Top 10 Fornecedores</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.topSuppliers} accent="info" />
+              </CardContent>
+            </Card>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Centros de Custos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TopList items={analyticsQuery.data.byCostCenter.slice(0, 10)} accent="success" />
+              </CardContent>
+            </Card>
+          </section>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Participação das Categorias</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <TreemapChart data={analyticsQuery.data.categoryTreemap} />
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Heatmap Financeiro — Categorias × Meses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Heatmap rows={analyticsQuery.data.heatmap} />
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Waterfall do Resultado</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <Waterfall
+                steps={[
+                  { label: "Receita", value: query.data.kpis.grossRevenue },
+                  { label: "(-) CMV", value: -query.data.kpis.cmv },
+                  { label: "Lucro Bruto", value: query.data.kpis.grossProfit, total: true },
+                  { label: "(-) Fixas", value: -query.data.expenseComposition.fixed },
+                  { label: "(-) Variáveis", value: -query.data.expenseComposition.variable },
+                  {
+                    label: "Result. Operacional",
+                    value: query.data.kpis.operatingResult,
+                    total: true,
+                  },
+                  { label: "(-) Outras", value: -query.data.expenseComposition.other },
+                  { label: "Lucro Líquido", value: query.data.kpis.netProfit, total: true },
+                ]}
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
+
 
 const tooltipStyle = {
   background: "oklch(0.18 0.02 260)",
