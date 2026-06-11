@@ -15,6 +15,14 @@ import {
   Building2,
   ChevronDown,
   ChartLine,
+  TrendingUp,
+  TrendingDown,
+  Waves,
+  Target,
+  FileText,
+  Sparkles,
+  Activity,
+  Gauge as GaugeIcon,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
@@ -44,16 +52,28 @@ import { listMyCompanies, createCompany } from "@/features/companies/companies.f
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-const NAV = [
+const NAV_MAIN = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/dre", label: "DRE", icon: FileBarChart },
-  { to: "/lancamentos", label: "Lançamentos", icon: ListChecks },
-  { to: "/contas", label: "Contas Bancárias", icon: Wallet },
+  { to: "/fluxo-caixa", label: "Fluxo de Caixa", icon: Waves },
+  { to: "/receitas", label: "Receitas", icon: TrendingUp },
+  { to: "/despesas", label: "Despesas", icon: TrendingDown },
   { to: "/centros-custos", label: "Centros de Custos", icon: Layers },
-  { to: "/cadastros", label: "Cadastros", icon: BookOpen },
-  { to: "/importar", label: "Importar", icon: Upload },
+  { to: "/contas", label: "Contas Bancárias", icon: Wallet },
+  { to: "/metas", label: "Metas", icon: Target },
+  { to: "/relatorios", label: "Relatórios", icon: FileText },
+  { to: "/analises", label: "Análises", icon: Activity },
+  { to: "/ia", label: "IA Financeira", icon: Sparkles },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
+
+const NAV_OPS = [
+  { to: "/raio-x", label: "Raio-X Financeiro", icon: GaugeIcon },
+  { to: "/lancamentos", label: "Lançamentos", icon: ListChecks },
+  { to: "/cadastros", label: "Cadastros", icon: BookOpen },
+  { to: "/importar", label: "Importar", icon: Upload },
+] as const;
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
