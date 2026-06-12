@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, fromCents, MONTH_LABELS } from "@/lib/money";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
-import { listTransactions } from "@/features/transactions/transactions.functions";
+import { listAllTransactions } from "@/features/transactions/transactions.functions";
 
 type Monthly = NonNullable<ReturnType<typeof useDre>["data"]>["monthly"];
 
