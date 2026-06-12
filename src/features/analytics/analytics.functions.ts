@@ -61,7 +61,7 @@ export const getAnalytics = createServerFn({ method: "POST" })
     const yearStart = `${data.year}-01-01`;
     const yearEnd = `${data.year + 1}-01-01`;
 
-    const { data: rows, error } = await context.supabase
+    
     const txs = await fetchAllRows<TxAggRow>((from, to) =>
       context.supabase
         .from("transactions")
