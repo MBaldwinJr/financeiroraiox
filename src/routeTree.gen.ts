@@ -29,6 +29,7 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedCentrosCustosRouteImport } from './routes/_authenticated/centros-custos'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedAnalisesRouteImport } from './routes/_authenticated/analises'
+import { Route as ApiPublicHooksProcessImportJobsRouteImport } from './routes/api/public/hooks/process-import-jobs'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -133,6 +134,12 @@ const AuthenticatedAnalisesRoute = AuthenticatedAnalisesRouteImport.update({
   path: '/analises',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksProcessImportJobsRoute =
+  ApiPublicHooksProcessImportJobsRouteImport.update({
+    id: '/api/public/hooks/process-import-jobs',
+    path: '/api/public/hooks/process-import-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/raio-x': typeof AuthenticatedRaioXRoute
   '/receitas': typeof AuthenticatedReceitasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -175,6 +183,7 @@ export interface FileRoutesByTo {
   '/receitas': typeof AuthenticatedReceitasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/receitas': typeof AuthenticatedReceitasRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/raio-x'
     | '/receitas'
     | '/relatorios'
+    | '/api/public/hooks/process-import-jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/receitas'
     | '/relatorios'
     | '/'
+    | '/api/public/hooks/process-import-jobs'
   id:
     | '__root__'
     | '/_authenticated'
@@ -264,11 +276,13 @@ export interface FileRouteTypes {
     | '/_authenticated/receitas'
     | '/_authenticated/relatorios'
     | '/_authenticated/'
+    | '/api/public/hooks/process-import-jobs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksProcessImportJobsRoute: typeof ApiPublicHooksProcessImportJobsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -413,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalisesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/process-import-jobs': {
+      id: '/api/public/hooks/process-import-jobs'
+      path: '/api/public/hooks/process-import-jobs'
+      fullPath: '/api/public/hooks/process-import-jobs'
+      preLoaderRoute: typeof ApiPublicHooksProcessImportJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -464,7 +485,18 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksProcessImportJobsRoute: ApiPublicHooksProcessImportJobsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
