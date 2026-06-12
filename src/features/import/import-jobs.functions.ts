@@ -1,6 +1,41 @@
 import { createServerFn } from "@tanstack/react-start";
+import { createHash } from "crypto";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paginate";
+
+function normalizeText(s: string | null | undefined): string {
+  return (s ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function fingerprintFor(
+  companyId: string,
+  r: {
+    date: string;
+    kind: "revenue" | "expense";
+    amountCents: number;
+    description: string;
+    docNumber?: string | null;
+    erpCode?: string | null;
+  },
+): string {
+  const key = [
+    companyId,
+    r.date,
+    r.kind,
+    r.amountCents,
+    normalizeText(r.description),
+    r.docNumber ?? "",
+    r.erpCode ?? "",
+  ].join("|");
+  return createHash("sha256").update(key).digest("hex");
+}
+
 
 const KINDS = ["revenue", "expense"] as const;
 
