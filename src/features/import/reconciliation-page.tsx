@@ -256,7 +256,7 @@ function FindingsTable({ rows }: { rows: ReconciliationFinding[] }) {
                     </td>
                     <td
                       className={`px-2 py-2 text-right numeric ${
-                        f.deltaDays > 0 ? "text-warning" : ""
+                        f.deltaDays > 0 ? "text-amber-500" : ""
                       }`}
                     >
                       {f.deltaDays === 0 ? "—" : `${f.deltaDays}d`}
