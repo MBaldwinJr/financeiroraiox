@@ -283,6 +283,71 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          created_by: string
+          duplicates: number
+          error: string | null
+          id: string
+          inserted: number
+          locked_at: string | null
+          max_attempts: number
+          payload: Json
+          processed: number
+          source: string
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          duplicates?: number
+          error?: string | null
+          id?: string
+          inserted?: number
+          locked_at?: string | null
+          max_attempts?: number
+          payload: Json
+          processed?: number
+          source?: string
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          duplicates?: number
+          error?: string | null
+          id?: string
+          inserted?: number
+          locked_at?: string | null
+          max_attempts?: number
+          payload?: Json
+          processed?: number
+          source?: string
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parties: {
         Row: {
           company_id: string
@@ -336,6 +401,7 @@ export type Database = {
           date: string
           deleted_at: string | null
           description: string
+          fingerprint: string | null
           id: string
           kind: Database["public"]["Enums"]["tx_kind"]
           notes: string | null
@@ -356,6 +422,7 @@ export type Database = {
           date: string
           deleted_at?: string | null
           description: string
+          fingerprint?: string | null
           id?: string
           kind: Database["public"]["Enums"]["tx_kind"]
           notes?: string | null
@@ -376,6 +443,7 @@ export type Database = {
           date?: string
           deleted_at?: string | null
           description?: string
+          fingerprint?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["tx_kind"]
           notes?: string | null
