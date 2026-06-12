@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paginate";
+
 
 const PAYMENT_METHODS = ["cash", "pix", "boleto", "cheque", "card"] as const;
 const KINDS = ["revenue", "expense"] as const;
