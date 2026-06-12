@@ -254,12 +254,12 @@ export const recategorizeTransactions = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ context, data }) => {
-    const { error, count } = await context.supabase
+    const { data: updated, error } = await context.supabase
       .from("transactions")
       .update({ category_id: data.categoryId })
       .eq("company_id", data.companyId)
       .in("id", data.transactionIds)
-      .select("id", { count: "exact", head: true });
+      .select("id");
     if (error) throw new Error(error.message);
-    return { updated: count ?? 0 };
+    return { updated: updated?.length ?? 0 };
   });
