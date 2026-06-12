@@ -34,26 +34,31 @@ export const getFinancials = createServerFn({ method: "POST" })
     const yearStart = `${data.year}-01-01`;
     const yearEnd = `${data.year + 1}-01-01`;
     // Pull the whole year for time series; compute current month aggregations client-side here.
-    const { data: rows, error } = await context.supabase
-      .from("transactions")
-      .select("date, amount_cents, kind, payment_method, category:categories(dre_group)")
-      .eq("company_id", data.companyId)
-      .is("deleted_at", null)
-      .gte("date", yearStart)
-      .lt("date", yearEnd);
-    if (error) throw new Error(error.message);
+    const rows = await fetchAllRows<TxRow>((from, to) =>
+      context.supabase
+        .from("transactions")
+        .select("date, amount_cents, kind, payment_method, category:categories(dre_group)")
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .gte("date", yearStart)
+        .lt("date", yearEnd)
+        .range(from, to) as unknown as PromiseLike<{ data: TxRow[] | null; error: { message: string } | null }>,
+    );
 
     // Also pull prior year for YoY comparison
-    const { data: prevRows, error: prevErr } = await context.supabase
-      .from("transactions")
-      .select("date, amount_cents, kind")
-      .eq("company_id", data.companyId)
-      .is("deleted_at", null)
-      .gte("date", `${data.year - 1}-01-01`)
-      .lt("date", yearStart);
-    if (prevErr) throw new Error(prevErr.message);
+    const prevRows = await fetchAllRows<{ date: string; amount_cents: number; kind: "revenue" | "expense" }>(
+      (from, to) =>
+        context.supabase
+          .from("transactions")
+          .select("date, amount_cents, kind")
+          .eq("company_id", data.companyId)
+          .is("deleted_at", null)
+          .gte("date", `${data.year - 1}-01-01`)
+          .lt("date", yearStart)
+          .range(from, to) as unknown as PromiseLike<{ data: { date: string; amount_cents: number; kind: "revenue" | "expense" }[] | null; error: { message: string } | null }>,
+    );
 
-    const txs = (rows ?? []) as unknown as TxRow[];
+    const txs = rows;
 
     // Monthly buckets (12 months)
     const monthly = Array.from({ length: 12 }, () => ({
