@@ -62,17 +62,18 @@ export const getAnalytics = createServerFn({ method: "POST" })
     const yearEnd = `${data.year + 1}-01-01`;
 
     const { data: rows, error } = await context.supabase
-      .from("transactions")
-      .select(
-        "date, amount_cents, kind, category:categories(id, name, dre_group), cost_center:cost_centers(id, name), party:parties(id, name)",
-      )
-      .eq("company_id", data.companyId)
-      .is("deleted_at", null)
-      .gte("date", yearStart)
-      .lt("date", yearEnd);
-    if (error) throw new Error(error.message);
-
-    const txs = (rows ?? []) as unknown as TxAggRow[];
+    const txs = await fetchAllRows<TxAggRow>((from, to) =>
+      context.supabase
+        .from("transactions")
+        .select(
+          "date, amount_cents, kind, category:categories(id, name, dre_group), cost_center:cost_centers(id, name), party:parties(id, name)",
+        )
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .gte("date", yearStart)
+        .lt("date", yearEnd)
+        .range(from, to) as unknown as PromiseLike<{ data: TxAggRow[] | null; error: { message: string } | null }>,
+    );
 
     const inSelected = (tx: TxAggRow) =>
       !data.month || Number(tx.date.slice(5, 7)) === data.month;
