@@ -245,6 +245,38 @@ export function ErpPdfImportPage() {
         </CardContent>
       </Card>
 
+      {jobQ.data && (
+        <Card className="glass-card">
+          <CardContent className="space-y-2 p-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                Job <span className="font-mono">{jobQ.data.id.slice(0, 8)}</span> ·{" "}
+                <Badge variant={
+                  jobQ.data.status === "completed" ? "default" :
+                  jobQ.data.status === "failed" ? "destructive" : "secondary"
+                }>
+                  {jobQ.data.status}
+                </Badge>
+                {jobQ.data.attempts > 0 && (
+                  <span className="ml-2">tentativa {jobQ.data.attempts}/{jobQ.data.max_attempts}</span>
+                )}
+              </span>
+              <span className="numeric text-muted-foreground">
+                {jobQ.data.processed}/{jobQ.data.total} · {jobQ.data.inserted} inseridos · {jobQ.data.duplicates} duplicados
+              </span>
+            </div>
+            <Progress value={jobQ.data.total ? (jobQ.data.processed / jobQ.data.total) * 100 : 0} />
+            {jobQ.data.error && (
+              <p className="text-xs text-destructive">{jobQ.data.error}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeJobId && jobQ.data?.status === "completed" && (
+        <ImportDiagnostic jobId={activeJobId} companyId={companyId} />
+      )}
+
       {rows.length > 0 && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -274,38 +306,6 @@ export function ErpPdfImportPage() {
             </div>
           </div>
 
-          {jobQ.data && (
-            <Card className="glass-card mt-4">
-              <CardContent className="space-y-2 p-4">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    Job <span className="font-mono">{jobQ.data.id.slice(0, 8)}</span> ·{" "}
-                    <Badge variant={
-                      jobQ.data.status === "completed" ? "default" :
-                      jobQ.data.status === "failed" ? "destructive" : "secondary"
-                    }>
-                      {jobQ.data.status}
-                    </Badge>
-                    {jobQ.data.attempts > 0 && (
-                      <span className="ml-2">tentativa {jobQ.data.attempts}/{jobQ.data.max_attempts}</span>
-                    )}
-                  </span>
-                  <span className="numeric text-muted-foreground">
-                    {jobQ.data.processed}/{jobQ.data.total} · {jobQ.data.inserted} inseridos · {jobQ.data.duplicates} duplicados
-                  </span>
-                </div>
-                <Progress value={jobQ.data.total ? (jobQ.data.processed / jobQ.data.total) * 100 : 0} />
-                {jobQ.data.error && (
-                  <p className="text-xs text-destructive">{jobQ.data.error}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {activeJobId && jobQ.data?.status === "completed" && (
-            <ImportDiagnostic jobId={activeJobId} companyId={companyId} />
-          )}
-
           <TabsContent value="review" className="mt-4">
             <ReviewTable
               rows={rows}
@@ -324,6 +324,7 @@ export function ErpPdfImportPage() {
           </TabsContent>
         </Tabs>
       )}
+
     </div>
   );
 }
