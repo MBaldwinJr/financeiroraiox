@@ -30,6 +30,7 @@ import {
   saveErpMappings,
 } from "@/features/import/erp-mappings.functions";
 import { parseErpPdf, type ErpParsedRow } from "@/features/import/erp-pdf-parser";
+import { ImportDiagnostic } from "@/features/import/import-diagnostic";
 import { formatBRL } from "@/lib/money";
 
 interface ReviewRow extends ErpParsedRow {
