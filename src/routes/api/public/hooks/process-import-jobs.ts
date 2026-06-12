@@ -214,7 +214,7 @@ async function processJob(job: {
 async function runOnce(jobId?: string) {
   const claimed = await claimJob(getAdmin(), jobId);
   if (!claimed) return { idle: true };
-  return processJob(claimed as Parameters<typeof processJob>[0]);
+  return processJob(claimed as unknown as Parameters<typeof processJob>[0]);
 }
 
 export const Route = createFileRoute("/api/public/hooks/process-import-jobs")({
