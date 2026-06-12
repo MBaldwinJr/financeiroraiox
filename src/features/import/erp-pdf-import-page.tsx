@@ -302,6 +302,10 @@ export function ErpPdfImportPage() {
             </Card>
           )}
 
+          {activeJobId && jobQ.data?.status === "completed" && (
+            <ImportDiagnostic jobId={activeJobId} companyId={companyId} />
+          )}
+
           <TabsContent value="review" className="mt-4">
             <ReviewTable
               rows={rows}
