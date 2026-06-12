@@ -23,6 +23,7 @@ import {
   Sparkles,
   Activity,
   Gauge as GaugeIcon,
+  Scale,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
@@ -73,6 +74,7 @@ const NAV_OPS = [
   { to: "/cadastros", label: "Cadastros", icon: BookOpen },
   { to: "/importar", label: "Importar Planilha", icon: Upload },
   { to: "/importar-erp", label: "Importar PDF ERP", icon: FileText },
+  { to: "/reconciliacao", label: "Reconciliação", icon: Scale },
 ] as const;
 
 

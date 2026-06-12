@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRows } from "@/lib/supabase-paginate";
 
 const Message = z.object({
   role: z.enum(["user", "assistant"]),
@@ -53,16 +54,16 @@ export const askFinanceAI = createServerFn({ method: "POST" })
     // Pull yearly aggregates as context
     const yearStart = `${data.year}-01-01`;
     const yearEnd = `${data.year + 1}-01-01`;
-    const { data: rows, error } = await context.supabase
-      .from("transactions")
-      .select("date, amount_cents, kind, category:categories(name, dre_group)")
-      .eq("company_id", data.companyId)
-      .is("deleted_at", null)
-      .gte("date", yearStart)
-      .lt("date", yearEnd);
-    if (error) throw new Error(error.message);
-
-    const txs = (rows ?? []) as unknown as TxRow[];
+    const txs = await fetchAllRows<TxRow>((from, to) =>
+      context.supabase
+        .from("transactions")
+        .select("date, amount_cents, kind, category:categories(name, dre_group)")
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .gte("date", yearStart)
+        .lt("date", yearEnd)
+        .range(from, to) as unknown as PromiseLike<{ data: TxRow[] | null; error: { message: string } | null }>,
+    );
     const monthly = Array.from({ length: 12 }, () => ({ revenue: 0, expense: 0 }));
     const byCategory = new Map<string, number>();
     for (const tx of txs) {
