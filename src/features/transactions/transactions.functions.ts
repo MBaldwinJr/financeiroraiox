@@ -85,6 +85,57 @@ export const listTransactions = createServerFn({ method: "POST" })
     return { rows: rows ?? [], total: count ?? 0 };
   });
 
+// Returns ALL matching rows (paginated server-side). Use for totals/exports.
+const AllFilterSchema = FilterSchema.omit({ limit: true, offset: true });
+type AllTxRow = {
+  id: string;
+  date: string;
+  description: string;
+  amount_cents: number;
+  kind: "revenue" | "expense";
+  payment_method: string | null;
+  status: string;
+  notes: string | null;
+  category_id: string | null;
+  cost_center_id: string | null;
+  bank_account_id: string | null;
+  party_id: string | null;
+  categories: { name: string } | null;
+  cost_centers: { name: string } | null;
+  bank_accounts: { name: string } | null;
+  parties: { name: string } | null;
+};
+
+export const listAllTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AllFilterSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    const { start, end } = rangeForFilters(data.year, data.month);
+    const rows = await fetchAllRows<AllTxRow>((from, to) => {
+      let q = context.supabase
+        .from("transactions")
+        .select(
+          "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name), cost_centers(name), bank_accounts(name), parties(name)",
+        )
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .gte("date", start)
+        .lt("date", end)
+        .order("date", { ascending: false })
+        .range(from, to);
+      if (data.search) q = q.ilike("description", `%${data.search}%`);
+      if (data.kind) q = q.eq("kind", data.kind);
+      if (data.categoryIds?.length) q = q.in("category_id", data.categoryIds);
+      if (data.costCenterIds?.length) q = q.in("cost_center_id", data.costCenterIds);
+      if (data.bankAccountIds?.length) q = q.in("bank_account_id", data.bankAccountIds);
+      if (data.partyIds?.length) q = q.in("party_id", data.partyIds);
+      if (data.paymentMethods?.length) q = q.in("payment_method", data.paymentMethods);
+      return q as unknown as PromiseLike<{ data: AllTxRow[] | null; error: { message: string } | null }>;
+    });
+    return { rows, total: rows.length };
+  });
+
+
 export const upsertTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => TransactionInput.parse(input))
