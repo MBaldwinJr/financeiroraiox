@@ -23,6 +23,7 @@ import {
   Sparkles,
   Activity,
   Gauge as GaugeIcon,
+  Scale,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
