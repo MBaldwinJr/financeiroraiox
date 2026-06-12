@@ -171,7 +171,7 @@ const ImportInput = z.object({
       }),
     )
     .min(1)
-    .max(2000),
+    .max(20000),
 });
 
 export const importTransactions = createServerFn({ method: "POST" })
