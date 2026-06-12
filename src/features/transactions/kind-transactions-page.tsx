@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatBRL, formatDate, MONTH_LABELS } from "@/lib/money";
-import { listTransactions } from "@/features/transactions/transactions.functions";
+import { listAllTransactions } from "@/features/transactions/transactions.functions";
 import { cn } from "@/lib/utils";
 
 interface Props {
