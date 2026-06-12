@@ -81,15 +81,16 @@ export function RelatoriosPage() {
   const year = useFilterStore((s) => s.range.year);
   const dreQ = useDre();
 
-  const fetchTx = useServerFn(listTransactions);
+  const fetchTx = useServerFn(listAllTransactions);
   const txQ = useQuery({
-    queryKey: ["report-transactions", companyId, year],
+    queryKey: ["report-transactions-all", companyId, year],
     queryFn: () =>
       fetchTx({
-        data: { companyId: companyId!, year, month: null, limit: 500, offset: 0 },
+        data: { companyId: companyId!, year, month: null },
       }),
     enabled: !!companyId,
   });
+
 
   const handleExcel = () => {
     if (!dreQ.data) return;
