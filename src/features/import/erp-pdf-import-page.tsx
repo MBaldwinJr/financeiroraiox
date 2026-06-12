@@ -46,6 +46,7 @@ export function ErpPdfImportPage() {
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [parsing, setParsing] = useState(false);
   const [tab, setTab] = useState<"review" | "mappings">("review");
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const fetchCategories = useServerFn(listCategories);
   const categoriesQ = useQuery({
@@ -61,35 +62,61 @@ export function ErpPdfImportPage() {
     enabled: !!companyId,
   });
 
-  const importFn = useServerFn(importTransactions);
+  const enqueueFn = useServerFn(enqueueImportJob);
+  const getJobFn = useServerFn(getImportJob);
   const saveMappingsFn = useServerFn(saveErpMappings);
+
+  const jobQ = useQuery({
+    queryKey: ["import-job", activeJobId],
+    queryFn: () => getJobFn({ data: { jobId: activeJobId! } }),
+    enabled: !!activeJobId,
+    refetchInterval: (q) => {
+      const s = q.state.data?.status;
+      return s === "completed" || s === "failed" ? false : 2000;
+    },
+  });
+
+  useEffect(() => {
+    const j = jobQ.data;
+    if (!j) return;
+    if (j.status === "completed") {
+      toast.success(
+        `Importação concluída: ${j.inserted} inseridos, ${j.duplicates} duplicados ignorados.`,
+      );
+      setRows([]);
+      qc.invalidateQueries();
+    } else if (j.status === "failed") {
+      toast.error(`Importação falhou após ${j.attempts} tentativa(s): ${j.error ?? "erro"}`);
+    }
+  }, [jobQ.data?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const importMut = useMutation({
     mutationFn: async () => {
       const selected = rows.filter((r) => r.include);
       if (!selected.length) throw new Error("Selecione ao menos uma linha.");
-      return importFn({
+      return enqueueFn({
         data: {
           companyId: companyId!,
+          source: "erp_pdf",
           rows: selected.map((r) => ({
             date: r.date,
             description: r.description,
             amountCents: r.amountCents,
             kind: r.kind,
-            paymentMethod: null,
             categoryName: r.categoryName,
             partyName: r.partyName,
+            erpCode: r.erpCode,
+            docNumber: r.docNumber ?? null,
             notes: `[ERP ${r.erpCode}] ${r.erpName}${r.docNumber ? ` · Doc ${r.docNumber}` : ""}`,
           })),
         },
       });
     },
-    onSuccess: ({ inserted }) => {
-      toast.success(`${inserted} lançamentos importados.`);
-      setRows([]);
-      qc.invalidateQueries();
+    onSuccess: ({ jobId }) => {
+      setActiveJobId(jobId);
+      toast.info("Importação enfileirada — processando em segundo plano.");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha na importação."),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao enfileirar."),
   });
 
   const saveMappingsMut = useMutation({
