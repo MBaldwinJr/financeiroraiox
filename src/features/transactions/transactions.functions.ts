@@ -216,7 +216,12 @@ export const importTransactions = createServerFn({ method: "POST" })
       created_by: context.userId,
     }));
 
-    const { error } = await context.supabase.from("transactions").insert(payload);
-    if (error) throw new Error(error.message);
+    const CHUNK = 500;
+    for (let i = 0; i < payload.length; i += CHUNK) {
+      const { error } = await context.supabase
+        .from("transactions")
+        .insert(payload.slice(i, i + CHUNK));
+      if (error) throw new Error(error.message);
+    }
     return { inserted: payload.length };
   });
