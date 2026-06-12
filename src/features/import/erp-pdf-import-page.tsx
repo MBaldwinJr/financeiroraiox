@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { listCategories } from "@/features/catalog/catalog.functions";
-import { importTransactions } from "@/features/transactions/transactions.functions";
+import {
+  enqueueImportJob,
+  getImportJob,
+} from "@/features/import/import-jobs.functions";
 import {
   listErpMappings,
   saveErpMappings,
@@ -42,6 +46,7 @@ export function ErpPdfImportPage() {
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [parsing, setParsing] = useState(false);
   const [tab, setTab] = useState<"review" | "mappings">("review");
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const fetchCategories = useServerFn(listCategories);
   const categoriesQ = useQuery({
@@ -57,35 +62,61 @@ export function ErpPdfImportPage() {
     enabled: !!companyId,
   });
 
-  const importFn = useServerFn(importTransactions);
+  const enqueueFn = useServerFn(enqueueImportJob);
+  const getJobFn = useServerFn(getImportJob);
   const saveMappingsFn = useServerFn(saveErpMappings);
+
+  const jobQ = useQuery({
+    queryKey: ["import-job", activeJobId],
+    queryFn: () => getJobFn({ data: { jobId: activeJobId! } }),
+    enabled: !!activeJobId,
+    refetchInterval: (q) => {
+      const s = q.state.data?.status;
+      return s === "completed" || s === "failed" ? false : 2000;
+    },
+  });
+
+  useEffect(() => {
+    const j = jobQ.data;
+    if (!j) return;
+    if (j.status === "completed") {
+      toast.success(
+        `Importação concluída: ${j.inserted} inseridos, ${j.duplicates} duplicados ignorados.`,
+      );
+      setRows([]);
+      qc.invalidateQueries();
+    } else if (j.status === "failed") {
+      toast.error(`Importação falhou após ${j.attempts} tentativa(s): ${j.error ?? "erro"}`);
+    }
+  }, [jobQ.data?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const importMut = useMutation({
     mutationFn: async () => {
       const selected = rows.filter((r) => r.include);
       if (!selected.length) throw new Error("Selecione ao menos uma linha.");
-      return importFn({
+      return enqueueFn({
         data: {
           companyId: companyId!,
+          source: "erp_pdf",
           rows: selected.map((r) => ({
             date: r.date,
             description: r.description,
             amountCents: r.amountCents,
             kind: r.kind,
-            paymentMethod: null,
             categoryName: r.categoryName,
             partyName: r.partyName,
+            erpCode: r.erpCode,
+            docNumber: r.docNumber ?? null,
             notes: `[ERP ${r.erpCode}] ${r.erpName}${r.docNumber ? ` · Doc ${r.docNumber}` : ""}`,
           })),
         },
       });
     },
-    onSuccess: ({ inserted }) => {
-      toast.success(`${inserted} lançamentos importados.`);
-      setRows([]);
-      qc.invalidateQueries();
+    onSuccess: ({ jobId }) => {
+      setActiveJobId(jobId);
+      toast.info("Importação enfileirada — processando em segundo plano.");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha na importação."),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao enfileirar."),
   });
 
   const saveMappingsMut = useMutation({
@@ -232,12 +263,43 @@ export function ErpPdfImportPage() {
               >
                 <Save className="mr-2 h-4 w-4" /> Salvar mapeamentos
               </Button>
-              <Button onClick={() => importMut.mutate()} disabled={importMut.isPending || !selectedCount}>
+              <Button
+                onClick={() => importMut.mutate()}
+                disabled={importMut.isPending || !selectedCount || jobQ.data?.status === "processing" || jobQ.data?.status === "pending"}
+              >
                 <Upload className="mr-2 h-4 w-4" />
-                {importMut.isPending ? "Importando…" : `Importar ${selectedCount}`}
+                {importMut.isPending ? "Enviando…" : `Importar ${selectedCount}`}
               </Button>
             </div>
           </div>
+
+          {jobQ.data && (
+            <Card className="glass-card mt-4">
+              <CardContent className="space-y-2 p-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Job <span className="font-mono">{jobQ.data.id.slice(0, 8)}</span> ·{" "}
+                    <Badge variant={
+                      jobQ.data.status === "completed" ? "default" :
+                      jobQ.data.status === "failed" ? "destructive" : "secondary"
+                    }>
+                      {jobQ.data.status}
+                    </Badge>
+                    {jobQ.data.attempts > 0 && (
+                      <span className="ml-2">tentativa {jobQ.data.attempts}/{jobQ.data.max_attempts}</span>
+                    )}
+                  </span>
+                  <span className="numeric text-muted-foreground">
+                    {jobQ.data.processed}/{jobQ.data.total} · {jobQ.data.inserted} inseridos · {jobQ.data.duplicates} duplicados
+                  </span>
+                </div>
+                <Progress value={jobQ.data.total ? (jobQ.data.processed / jobQ.data.total) * 100 : 0} />
+                {jobQ.data.error && (
+                  <p className="text-xs text-destructive">{jobQ.data.error}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <TabsContent value="review" className="mt-4">
             <ReviewTable
