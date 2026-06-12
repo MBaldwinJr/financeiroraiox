@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, fromCents, MONTH_LABELS } from "@/lib/money";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
-import { listTransactions } from "@/features/transactions/transactions.functions";
+import { listAllTransactions } from "@/features/transactions/transactions.functions";
 
 type Monthly = NonNullable<ReturnType<typeof useDre>["data"]>["monthly"];
 
@@ -81,15 +81,16 @@ export function RelatoriosPage() {
   const year = useFilterStore((s) => s.range.year);
   const dreQ = useDre();
 
-  const fetchTx = useServerFn(listTransactions);
+  const fetchTx = useServerFn(listAllTransactions);
   const txQ = useQuery({
-    queryKey: ["report-transactions", companyId, year],
+    queryKey: ["report-transactions-all", companyId, year],
     queryFn: () =>
       fetchTx({
-        data: { companyId: companyId!, year, month: null, limit: 500, offset: 0 },
+        data: { companyId: companyId!, year, month: null },
       }),
     enabled: !!companyId,
   });
+
 
   const handleExcel = () => {
     if (!dreQ.data) return;

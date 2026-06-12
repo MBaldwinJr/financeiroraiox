@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatBRL, formatDate, MONTH_LABELS } from "@/lib/money";
-import { listTransactions } from "@/features/transactions/transactions.functions";
+import { listAllTransactions } from "@/features/transactions/transactions.functions";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -25,10 +25,10 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
   const filters = useFilterStore();
   const [search, setSearch] = useState("");
 
-  const fetcher = useServerFn(listTransactions);
+  const fetcher = useServerFn(listAllTransactions);
   const query = useQuery({
     queryKey: [
-      "transactions-kind",
+      "transactions-kind-all",
       kind,
       companyId,
       range.year,
@@ -51,12 +51,11 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
           costCenterIds: filters.costCenterIds,
           bankAccountIds: filters.bankAccountIds,
           paymentMethods: filters.paymentMethods as ("cash" | "pix" | "boleto" | "cheque" | "card")[],
-          limit: 500,
-          offset: 0,
         },
       }),
     enabled: !!companyId,
   });
+
 
   const rows = query.data?.rows ?? [];
   const total = useMemo(() => rows.reduce((s, r) => s + r.amount_cents, 0), [rows]);
