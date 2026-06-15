@@ -17,6 +17,7 @@ import { Route as AuthenticatedReconciliacaoRouteImport } from './routes/_authen
 import { Route as AuthenticatedReceitasRouteImport } from './routes/_authenticated/receitas'
 import { Route as AuthenticatedRaioXRouteImport } from './routes/_authenticated/raio-x'
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
+import { Route as AuthenticatedMapeamentosErpRouteImport } from './routes/_authenticated/mapeamentos-erp'
 import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenticated/lancamentos'
 import { Route as AuthenticatedImportarErpRouteImport } from './routes/_authenticated/importar-erp'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
@@ -72,6 +73,12 @@ const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
   path: '/metas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMapeamentosErpRoute =
+  AuthenticatedMapeamentosErpRouteImport.update({
+    id: '/mapeamentos-erp',
+    path: '/mapeamentos-erp',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLancamentosRoute =
   AuthenticatedLancamentosRouteImport.update({
     id: '/lancamentos',
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/importar': typeof AuthenticatedImportarRoute
   '/importar-erp': typeof AuthenticatedImportarErpRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/raio-x': typeof AuthenticatedRaioXRoute
   '/receitas': typeof AuthenticatedReceitasRoute
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/importar': typeof AuthenticatedImportarRoute
   '/importar-erp': typeof AuthenticatedImportarErpRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/metas': typeof AuthenticatedMetasRoute
   '/raio-x': typeof AuthenticatedRaioXRoute
   '/receitas': typeof AuthenticatedReceitasRoute
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/importar-erp': typeof AuthenticatedImportarErpRoute
   '/_authenticated/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/_authenticated/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/raio-x': typeof AuthenticatedRaioXRoute
   '/_authenticated/receitas': typeof AuthenticatedReceitasRoute
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/importar'
     | '/importar-erp'
     | '/lancamentos'
+    | '/mapeamentos-erp'
     | '/metas'
     | '/raio-x'
     | '/receitas'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/importar'
     | '/importar-erp'
     | '/lancamentos'
+    | '/mapeamentos-erp'
     | '/metas'
     | '/raio-x'
     | '/receitas'
@@ -283,6 +295,7 @@ export interface FileRouteTypes {
     | '/_authenticated/importar'
     | '/_authenticated/importar-erp'
     | '/_authenticated/lancamentos'
+    | '/_authenticated/mapeamentos-erp'
     | '/_authenticated/metas'
     | '/_authenticated/raio-x'
     | '/_authenticated/receitas'
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/metas'
       fullPath: '/metas'
       preLoaderRoute: typeof AuthenticatedMetasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mapeamentos-erp': {
+      id: '/_authenticated/mapeamentos-erp'
+      path: '/mapeamentos-erp'
+      fullPath: '/mapeamentos-erp'
+      preLoaderRoute: typeof AuthenticatedMapeamentosErpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lancamentos': {
@@ -471,6 +491,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedImportarErpRoute: typeof AuthenticatedImportarErpRoute
   AuthenticatedLancamentosRoute: typeof AuthenticatedLancamentosRoute
+  AuthenticatedMapeamentosErpRoute: typeof AuthenticatedMapeamentosErpRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedRaioXRoute: typeof AuthenticatedRaioXRoute
   AuthenticatedReceitasRoute: typeof AuthenticatedReceitasRoute
@@ -493,6 +514,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedImportarErpRoute: AuthenticatedImportarErpRoute,
   AuthenticatedLancamentosRoute: AuthenticatedLancamentosRoute,
+  AuthenticatedMapeamentosErpRoute: AuthenticatedMapeamentosErpRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedRaioXRoute: AuthenticatedRaioXRoute,
   AuthenticatedReceitasRoute: AuthenticatedReceitasRoute,
