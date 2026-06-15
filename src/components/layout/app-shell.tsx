@@ -74,6 +74,7 @@ const NAV_OPS = [
   { to: "/cadastros", label: "Cadastros", icon: BookOpen },
   { to: "/importar", label: "Importar Planilha", icon: Upload },
   { to: "/importar-erp", label: "Importar PDF ERP", icon: FileText },
+  { to: "/mapeamentos-erp", label: "Mapeamentos ERP", icon: BookOpen },
   { to: "/reconciliacao", label: "Reconciliação", icon: Scale },
 ] as const;
 
