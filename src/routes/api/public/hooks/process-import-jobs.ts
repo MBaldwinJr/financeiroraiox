@@ -192,13 +192,15 @@ async function processJob(job: {
       .from("import_jobs")
       .update({
         status: "completed",
-        processed,
+        // Report progress against the original PDF row count so the UI shows 100%.
+        processed: rawRows.length,
         inserted,
         duplicates,
         error: null,
         locked_at: null,
       })
       .eq("id", job.id);
+
     return { completed: true, inserted, duplicates };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
