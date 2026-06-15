@@ -22,8 +22,8 @@ function normalize(s: string | null | undefined): string {
     .toLowerCase();
 }
 
-function fingerprint(companyId: string, r: ImportRow): string {
-  const key = [
+function fingerprintKey(companyId: string, r: ImportRow): string {
+  return [
     companyId,
     r.date,
     r.kind,
@@ -32,7 +32,26 @@ function fingerprint(companyId: string, r: ImportRow): string {
     r.docNumber ?? "",
     r.erpCode ?? "",
   ].join("|");
-  return createHash("sha256").update(key).digest("hex");
+}
+
+function fingerprintFromKey(key: string, occurrence?: number): string {
+  const occurrenceAwareKey = occurrence ? `${key}|occurrence:${occurrence}` : key;
+  return createHash("sha256").update(occurrenceAwareKey).digest("hex");
+}
+
+function fingerprintRows(companyId: string, rows: readonly ImportRow[]) {
+  const occurrences = new Map<string, number>();
+  return rows.map((r) => {
+    const key = fingerprintKey(companyId, r);
+    const occurrence = (occurrences.get(key) ?? 0) + 1;
+    occurrences.set(key, occurrence);
+    return {
+      r,
+      occurrence,
+      fp: fingerprintFromKey(key, occurrence),
+      legacyFp: fingerprintFromKey(key),
+    };
+  });
 }
 
 const CHUNK_SIZE = 200;
@@ -89,27 +108,11 @@ async function processJob(job: {
   const admin = await getAdmin();
   const startedAt = Date.now();
   const rawRows = job.payload?.rows ?? [];
-
-  // Global payload-level dedupe: guarantees a duplicate line in the same PDF
-  // is never inserted twice, regardless of chunking or DB visibility.
-  const globalSeen = new Set<string>();
-  let payloadDuplicateCount = 0;
-  const rows: ImportRow[] = [];
-  for (const r of rawRows) {
-    const fp = fingerprint(job.company_id, r);
-    if (globalSeen.has(fp)) {
-      payloadDuplicateCount += 1;
-      continue;
-    }
-    globalSeen.add(fp);
-    rows.push(r);
-  }
+  const rows = fingerprintRows(job.company_id, rawRows);
 
   let processed = job.processed;
   let inserted = job.inserted;
-  // Seed duplicate counter with payload-level duplicates only on the first run
-  // (when nothing has been processed yet), to avoid double-counting on resume.
-  let duplicates = job.duplicates + (job.processed === 0 ? payloadDuplicateCount : 0);
+  let duplicates = job.duplicates;
 
   // Load name maps once per run
   const [{ data: cats }, { data: parties }] = await Promise.all([
@@ -130,13 +133,11 @@ async function processJob(job: {
         return { yielded: true };
       }
       const slice = rows.slice(processed, processed + CHUNK_SIZE);
-      const withFp = slice.map((r) => ({ r, fp: fingerprint(job.company_id, r) }));
-      // No intra-slice dedupe needed — rows are already globally unique.
-      const unique = withFp;
-
 
       // 2. dedupe against existing DB rows
-      const fps = unique.map((u) => u.fp);
+      const fps = [
+        ...new Set(slice.flatMap((u) => (u.occurrence === 1 ? [u.fp, u.legacyFp] : [u.fp]))),
+      ];
       const { data: existing, error: exErr } = await admin
         .from("transactions")
         .select("fingerprint")
@@ -145,8 +146,9 @@ async function processJob(job: {
         .in("fingerprint", fps);
       if (exErr) throw new Error(exErr.message);
       const existingSet = new Set((existing ?? []).map((e) => e.fingerprint as string));
-      const toInsert = unique.filter((u) => {
-        if (existingSet.has(u.fp)) {
+      const toInsert = slice.filter((u) => {
+        const alreadyImported = existingSet.has(u.fp) || (u.occurrence === 1 && existingSet.has(u.legacyFp));
+        if (alreadyImported) {
           duplicates += 1;
           return false;
         }
