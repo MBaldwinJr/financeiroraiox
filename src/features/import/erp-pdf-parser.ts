@@ -122,13 +122,19 @@ function extractRows(lines: string[]): ErpParsedRow[] {
     const value = parseBr(entryToken[0]);
     const entryStart = entryToken.index ?? line.length;
 
-    // Description = text BETWEEN the date and the first monetary token
-    // (date is usually the leftmost column; amounts are the rightmost).
+    // Description = all non-monetary text after the date. Some ERP PDFs place
+    // "Forn: ... Doc ... Hist:" after the value columns; using only the text
+    // before the first amount loses the supplier/document and breaks dedupe.
     const dateEnd = (dateMatch.index ?? 0) + dateMatch[0].length;
     const firstAmountStart = amounts[0].index ?? entryStart;
+    const afterDateWithoutAmounts = line
+      .slice(dateEnd)
+      .replace(AMOUNT_GLOBAL_RE, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     const middle = line.slice(dateEnd, firstAmountStart).trim();
     const before = line.slice(0, dateMatch.index).trim();
-    const descSource = middle || before;
+    const descSource = afterDateWithoutAmounts || middle || before;
 
     let description = descSource;
     let partyName: string | null = null;
