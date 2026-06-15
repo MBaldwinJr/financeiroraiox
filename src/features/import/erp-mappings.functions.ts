@@ -51,7 +51,7 @@ export const saveErpMappings = createServerFn({ method: "POST" })
     // Os lançamentos guardam o código ERP no campo `notes` no formato "[ERP <code>] ...".
     let updated = 0;
     for (const m of data.mappings) {
-      const patch: Record<string, string | null> = {};
+      const patch: { category_id?: string | null; kind?: "revenue" | "expense" } = {};
       if (m.categoryId !== undefined) patch.category_id = m.categoryId ?? null;
       if (m.defaultKind) patch.kind = m.defaultKind;
       if (Object.keys(patch).length === 0) continue;
