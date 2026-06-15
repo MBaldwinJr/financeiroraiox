@@ -117,8 +117,7 @@ function extractRows(lines: string[]): ErpParsedRow[] {
     //  - 1 monetary token  → that is the entry value
     //  - 2+ monetary tokens → the LAST is the running balance (saldo);
     //                         the one immediately before it is the entry value
-    const entryToken =
-      amounts.length === 1 ? amounts[0] : amounts[amounts.length - 2];
+    const entryToken = amounts.length === 1 ? amounts[0] : amounts[amounts.length - 2];
     const value = parseBr(entryToken[0]);
     const entryStart = entryToken.index ?? line.length;
 
