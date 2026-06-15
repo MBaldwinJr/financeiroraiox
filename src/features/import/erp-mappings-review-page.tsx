@@ -116,10 +116,14 @@ export function ErpMappingsReviewPage() {
       if (!payload.length) throw new Error("Nada para salvar.");
       return saveMappingsFn({ data: { companyId: companyId!, mappings: payload } });
     },
-    onSuccess: ({ saved }) => {
-      toast.success(`${saved} mapeamento(s) atualizado(s).`);
+    onSuccess: ({ saved, updatedTransactions }) => {
+      toast.success(
+        `${saved} mapeamento(s) salvos · ${updatedTransactions} lançamento(s) reclassificados.`,
+      );
       setEdits({});
       qc.invalidateQueries({ queryKey: ["erp-mappings", companyId] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["dre"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
   });

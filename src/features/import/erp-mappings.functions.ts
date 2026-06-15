@@ -46,5 +46,26 @@ export const saveErpMappings = createServerFn({ method: "POST" })
       .from("erp_account_mappings")
       .upsert(payload, { onConflict: "company_id,erp_code" });
     if (error) throw new Error(error.message);
-    return { saved: payload.length };
+
+    // Reaplica os mapeamentos nos lançamentos já importados.
+    // Os lançamentos guardam o código ERP no campo `notes` no formato "[ERP <code>] ...".
+    let updated = 0;
+    for (const m of data.mappings) {
+      const patch: { category_id?: string | null; kind?: "revenue" | "expense" } = {};
+      if (m.categoryId !== undefined) patch.category_id = m.categoryId ?? null;
+      if (m.defaultKind) patch.kind = m.defaultKind;
+      if (Object.keys(patch).length === 0) continue;
+
+      const { data: rows, error: updErr } = await context.supabase
+        .from("transactions")
+        .update(patch)
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .like("notes", `[ERP ${m.erpCode}]%`)
+        .select("id");
+      if (updErr) throw new Error(updErr.message);
+      updated += rows?.length ?? 0;
+    }
+
+    return { saved: payload.length, updatedTransactions: updated };
   });
