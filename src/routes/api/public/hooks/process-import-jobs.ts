@@ -88,10 +88,28 @@ async function processJob(job: {
 }) {
   const admin = await getAdmin();
   const startedAt = Date.now();
-  const rows = job.payload?.rows ?? [];
+  const rawRows = job.payload?.rows ?? [];
+
+  // Global payload-level dedupe: guarantees a duplicate line in the same PDF
+  // is never inserted twice, regardless of chunking or DB visibility.
+  const globalSeen = new Set<string>();
+  let payloadDuplicateCount = 0;
+  const rows: ImportRow[] = [];
+  for (const r of rawRows) {
+    const fp = fingerprint(job.company_id, r);
+    if (globalSeen.has(fp)) {
+      payloadDuplicateCount += 1;
+      continue;
+    }
+    globalSeen.add(fp);
+    rows.push(r);
+  }
+
   let processed = job.processed;
   let inserted = job.inserted;
-  let duplicates = job.duplicates;
+  // Seed duplicate counter with payload-level duplicates only on the first run
+  // (when nothing has been processed yet), to avoid double-counting on resume.
+  let duplicates = job.duplicates + (job.processed === 0 ? payloadDuplicateCount : 0);
 
   // Load name maps once per run
   const [{ data: cats }, { data: parties }] = await Promise.all([
@@ -113,18 +131,9 @@ async function processJob(job: {
       }
       const slice = rows.slice(processed, processed + CHUNK_SIZE);
       const withFp = slice.map((r) => ({ r, fp: fingerprint(job.company_id, r) }));
+      // No intra-slice dedupe needed — rows are already globally unique.
+      const unique = withFp;
 
-      // 1. dedupe within slice
-      const seen = new Set<string>();
-      const unique: typeof withFp = [];
-      for (const item of withFp) {
-        if (seen.has(item.fp)) {
-          duplicates += 1;
-        } else {
-          seen.add(item.fp);
-          unique.push(item);
-        }
-      }
 
       // 2. dedupe against existing DB rows
       const fps = unique.map((u) => u.fp);
