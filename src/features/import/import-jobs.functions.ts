@@ -145,6 +145,17 @@ interface ExistingTx {
   category: { id: string; name: string } | null;
 }
 
+interface DuplicateImportGroup {
+  date: string;
+  description: string;
+  amountCents: number;
+  erpCode: string | null;
+  docNumber: string | null;
+  occurrences: number;
+  duplicateRows: number;
+  duplicateAmountCents: number;
+}
+
 export const diagnoseImportJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -161,12 +172,51 @@ export const diagnoseImportJob = createServerFn({ method: "POST" })
     const payload = (job.payload ?? {}) as { rows?: PayloadRow[] };
     const rows = payload.rows ?? [];
     if (!rows.length) {
-      return { byCategory: [], divergent: [], totalImportCents: 0, matchedCount: 0 };
+      return {
+        byCategory: [],
+        divergent: [],
+        totalImportCents: 0,
+        netImportCents: 0,
+        duplicateImportRows: 0,
+        duplicateImportCents: 0,
+        duplicateImportGroups: [],
+        matchedCount: 0,
+      };
     }
 
     const fps = rows.map((r) => ({ r, fp: fingerprintFor(job.company_id, r) }));
     const fpToIntended = new Map<string, PayloadRow>();
     fps.forEach(({ r, fp }) => fpToIntended.set(fp, r));
+
+    const duplicateMap = new Map<string, DuplicateImportGroup>();
+    for (const { r, fp } of fps) {
+      const duplicate = duplicateMap.get(fp);
+      if (!duplicate) {
+        duplicateMap.set(fp, {
+          date: r.date,
+          description: r.description,
+          amountCents: r.amountCents,
+          erpCode: r.erpCode ?? null,
+          docNumber: r.docNumber ?? null,
+          occurrences: 1,
+          duplicateRows: 0,
+          duplicateAmountCents: 0,
+        });
+        continue;
+      }
+      duplicate.occurrences += 1;
+      duplicate.duplicateRows += 1;
+      duplicate.duplicateAmountCents += r.amountCents;
+    }
+
+    const duplicateImportGroups = [...duplicateMap.values()]
+      .filter((g) => g.duplicateRows > 0)
+      .sort((a, b) => b.duplicateAmountCents - a.duplicateAmountCents);
+    const duplicateImportRows = duplicateImportGroups.reduce((acc, g) => acc + g.duplicateRows, 0);
+    const duplicateImportCents = duplicateImportGroups.reduce(
+      (acc, g) => acc + g.duplicateAmountCents,
+      0,
+    );
 
     const allFps = [...new Set(fps.map((x) => x.fp))];
 
@@ -232,11 +282,16 @@ export const diagnoseImportJob = createServerFn({ method: "POST" })
     }
 
     const totalImportCents = rows.reduce((a, r) => a + r.amountCents, 0);
+    const netImportCents = totalImportCents - duplicateImportCents;
 
     return {
       byCategory: [...byCategoryMap.values()].sort((a, b) => b.totalCents - a.totalCents),
       divergent,
       totalImportCents,
+      netImportCents,
+      duplicateImportRows,
+      duplicateImportCents,
+      duplicateImportGroups: duplicateImportGroups.slice(0, 20),
       matchedCount: existing.length,
       importedCount: rows.length,
     };

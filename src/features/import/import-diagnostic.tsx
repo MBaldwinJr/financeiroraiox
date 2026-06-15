@@ -80,7 +80,16 @@ export function ImportDiagnostic({ jobId, companyId }: Props) {
   }
   if (!diagQ.data) return null;
 
-  const { byCategory, totalImportCents, matchedCount, importedCount } = diagQ.data;
+  const {
+    byCategory,
+    totalImportCents,
+    netImportCents,
+    duplicateImportRows,
+    duplicateImportCents,
+    duplicateImportGroups,
+    matchedCount,
+    importedCount,
+  } = diagQ.data;
 
   return (
     <Card className="glass-card mt-4">
@@ -89,9 +98,56 @@ export function ImportDiagnostic({ jobId, companyId }: Props) {
       </CardHeader>
       <CardContent className="space-y-4 p-4">
         <div className="flex flex-wrap gap-2 text-xs">
-          <Badge variant="outline">PDF: {importedCount} linhas · {formatBRL(totalImportCents)}</Badge>
+          <Badge variant="outline">PDF bruto: {importedCount} linhas · {formatBRL(totalImportCents)}</Badge>
+          <Badge variant="outline">
+            Duplicados no PDF: {duplicateImportRows} linhas · {formatBRL(duplicateImportCents)}
+          </Badge>
+          <Badge variant="outline">Base líquida do DRE: {formatBRL(netImportCents)}</Badge>
           <Badge variant="outline">Encontradas no sistema: {matchedCount}</Badge>
         </div>
+
+        {duplicateImportGroups.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Linhas repetidas dentro do próprio PDF
+            </p>
+            <div className="overflow-x-auto rounded border border-border">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary/40 text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Data</th>
+                    <th className="px-3 py-2 text-left">Documento</th>
+                    <th className="px-3 py-2 text-left">Descrição</th>
+                    <th className="px-3 py-2 text-right">Repetições</th>
+                    <th className="px-3 py-2 text-right">Valor duplicado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {duplicateImportGroups.map((g) => (
+                    <tr
+                      key={`${g.date}-${g.erpCode ?? ""}-${g.docNumber ?? ""}-${g.description}`}
+                      className="border-t border-border/40"
+                    >
+                      <td className="px-3 py-1.5 numeric whitespace-nowrap">{g.date}</td>
+                      <td className="px-3 py-1.5 numeric whitespace-nowrap">{g.docNumber ?? "—"}</td>
+                      <td className="px-3 py-1.5">{g.description}</td>
+                      <td className="px-3 py-1.5 text-right numeric">
+                        {g.duplicateRows} de {g.occurrences}
+                      </td>
+                      <td className="px-3 py-1.5 text-right numeric">
+                        {formatBRL(g.duplicateAmountCents)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              O total bruto do PDF inclui essas repetições. A importação grava uma única vez cada
+              lançamento idêntico; por isso o DRE usa a base líquida.
+            </p>
+          </div>
+        )}
 
         <div>
           <p className="mb-2 text-xs font-medium text-muted-foreground">
