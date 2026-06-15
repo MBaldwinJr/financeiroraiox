@@ -96,7 +96,7 @@ function extractRows(lines: string[]): ErpParsedRow[] {
     if (shouldSkip(line)) continue;
 
     const dateMatch = line.match(DATE_RE);
-    const amtMatch = line.match(AMOUNT_RE);
+    const amounts = [...line.matchAll(AMOUNT_GLOBAL_RE)];
 
     // Account header: starts with code, no date on the same line
     if (!dateMatch) {
@@ -108,24 +108,39 @@ function extractRows(lines: string[]): ErpParsedRow[] {
       continue;
     }
 
-    if (!amtMatch || !currentCode || !section) continue;
+    if (!amounts.length || !currentCode || !section) continue;
 
     const [, dd, mm, yyyy] = dateMatch;
     const iso = `${yyyy}-${mm}-${dd}`;
-    const value = parseBr(amtMatch[1]);
-    const before = line.slice(0, dateMatch.index).trim();
 
-    let description = before;
+    // Pick the transaction amount:
+    //  - 1 monetary token  → that is the entry value
+    //  - 2+ monetary tokens → the LAST is the running balance (saldo);
+    //                         the one immediately before it is the entry value
+    const entryToken =
+      amounts.length === 1 ? amounts[0] : amounts[amounts.length - 2];
+    const value = parseBr(entryToken[0]);
+    const entryStart = entryToken.index ?? line.length;
+
+    // Description = text BETWEEN the date and the first monetary token
+    // (date is usually the leftmost column; amounts are the rightmost).
+    const dateEnd = (dateMatch.index ?? 0) + dateMatch[0].length;
+    const firstAmountStart = amounts[0].index ?? entryStart;
+    const middle = line.slice(dateEnd, firstAmountStart).trim();
+    const before = line.slice(0, dateMatch.index).trim();
+    const descSource = middle || before;
+
+    let description = descSource;
     let partyName: string | null = null;
     let docNumber: string | null = null;
 
-    const forn = before.match(FORN_RE);
+    const forn = descSource.match(FORN_RE);
     if (forn) {
       partyName = forn[1].trim();
       docNumber = forn[2].trim();
       description = partyName + (docNumber ? ` — Doc ${docNumber}` : "");
     } else {
-      const docTrail = before.match(/^(.+?)\s+(\d{4,})\s*$/);
+      const docTrail = descSource.match(/^(.+?)\s+(\d{4,})\s*$/);
       if (docTrail) {
         description = docTrail[1].trim();
         docNumber = docTrail[2];
