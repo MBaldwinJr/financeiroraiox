@@ -147,7 +147,8 @@ async function processJob(job: {
       if (exErr) throw new Error(exErr.message);
       const existingSet = new Set((existing ?? []).map((e) => e.fingerprint as string));
       const toInsert = slice.filter((u) => {
-        const alreadyImported = existingSet.has(u.fp) || (u.occurrence === 1 && existingSet.has(u.legacyFp));
+        const alreadyImported =
+          existingSet.has(u.fp) || (u.occurrence === 1 && existingSet.has(u.legacyFp));
         if (alreadyImported) {
           duplicates += 1;
           return false;
