@@ -17,7 +17,10 @@ export interface ErpParsedRow {
 
 const ACCOUNT_RE = /^(\d{2}(?:\.\d{3}(?:\.\d{3})?)?)\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][^]+)$/;
 const DATE_RE = /(\d{2})\/(\d{2})\/(\d{4})/;
-const AMOUNT_RE = /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/;
+// Capture EVERY monetary token on the line so we can pick the correct column.
+// In ERP "Razão / Plano de Contas" reports the LAST token is the running
+// balance (saldo) — never the entry amount.
+const AMOUNT_GLOBAL_RE = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
 const FORN_RE = /Forn:\s*\d+\s*-\s*(.+?)(?:\s{2,}|\s+)(\S+)\s*(?:Hist:)?\s*$/i;
 
 function parseBr(num: string): number {
