@@ -42,11 +42,14 @@ export function DrePage() {
   const other = sumRow("other");
 
   const grossProfit = revenue.map((r, i) => r - cmv[i]);
-  const totalExpense = monthly.map((m) => m.expense);
-  const operatingResult = revenue.map(
-    (r, i) => r - cmv[i] - supplier[i] - freight[i] - fixed[i] - variable[i] - operational[i],
+  // Total Despesas exclui CMV — o CMV já foi deduzido no Lucro Bruto.
+  const totalExpense = supplier.map(
+    (_, i) => supplier[i] + freight[i] + fixed[i] + variable[i] + operational[i] + other[i],
   );
-  const netProfit = revenue.map((r, i) => r - totalExpense[i]);
+  const operatingResult = grossProfit.map(
+    (gp, i) => gp - supplier[i] - freight[i] - fixed[i] - variable[i] - operational[i],
+  );
+  const netProfit = grossProfit.map((gp, i) => gp - totalExpense[i]);
   const margin = revenue.map((r, i) => (r > 0 ? netProfit[i] / r : 0));
 
   return (
