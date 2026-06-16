@@ -171,10 +171,11 @@ export const getFinancials = createServerFn({ method: "POST" })
     const grossRevenue = sum("revenue");
     const cmv = sum("cmv");
     const grossProfit = grossRevenue - cmv;
-    const totalExpenses = sum("expense");
+    // Total Despesas exclui CMV (CMV já reduz a Receita p/ Lucro Bruto)
+    const totalExpenses = sum("expense") - cmv;
     const operatingResult =
       grossRevenue - cmv - sum("supplier") - sum("freight") - sum("fixed") - sum("variable") - sum("operational");
-    const netProfit = grossRevenue - totalExpenses;
+    const netProfit = grossRevenue - cmv - totalExpenses;
     const margin = grossRevenue > 0 ? netProfit / grossRevenue : 0;
 
     // Previous-month variations (only if a specific month is selected)
