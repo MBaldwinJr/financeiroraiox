@@ -14,7 +14,7 @@ const VALID_GROUPS: DreGroupKey[] = [
   "other",
 ];
 
-export const Route = createFileRoute("/_authenticated/dre/$group")({
+export const Route = createFileRoute("/_authenticated/dre_/$group")({
   head: () => ({ meta: [{ title: "Detalhe DRE — Finance Vision BI" }] }),
   component: RouteComponent,
 });

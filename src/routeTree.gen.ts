@@ -35,7 +35,7 @@ import { Route as AuthenticatedComercialRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCentrosCustosRouteImport } from './routes/_authenticated/centros-custos'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedAnalisesRouteImport } from './routes/_authenticated/analises'
-import { Route as AuthenticatedDreGroupRouteImport } from './routes/_authenticated/dre.$group'
+import { Route as AuthenticatedDreGroupRouteImport } from './routes/_authenticated/dre_.$group'
 import { Route as ApiPublicHooksProcessImportJobsRouteImport } from './routes/api/public/hooks/process-import-jobs'
 
 const AuthRoute = AuthRouteImport.update({
@@ -175,9 +175,9 @@ const AuthenticatedAnalisesRoute = AuthenticatedAnalisesRouteImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDreGroupRoute = AuthenticatedDreGroupRouteImport.update({
-  id: '/$group',
-  path: '/$group',
-  getParentRoute: () => AuthenticatedDreRoute,
+  id: '/dre_/$group',
+  path: '/dre/$group',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiPublicHooksProcessImportJobsRoute =
   ApiPublicHooksProcessImportJobsRouteImport.update({
@@ -197,7 +197,7 @@ export interface FileRoutesByFullPath {
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
-  '/dre': typeof AuthenticatedDreRouteWithChildren
+  '/dre': typeof AuthenticatedDreRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -225,7 +225,7 @@ export interface FileRoutesByTo {
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
-  '/dre': typeof AuthenticatedDreRouteWithChildren
+  '/dre': typeof AuthenticatedDreRoute
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -256,7 +256,7 @@ export interface FileRoutesById {
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
-  '/_authenticated/dre': typeof AuthenticatedDreRouteWithChildren
+  '/_authenticated/dre': typeof AuthenticatedDreRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRoute
   '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
@@ -272,7 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/dre/$group': typeof AuthenticatedDreGroupRoute
+  '/_authenticated/dre_/$group': typeof AuthenticatedDreGroupRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRouteTypes {
@@ -362,7 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/vendas'
     | '/_authenticated/'
-    | '/_authenticated/dre/$group'
+    | '/_authenticated/dre_/$group'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesById: FileRoutesById
 }
@@ -556,12 +556,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalisesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/dre/$group': {
-      id: '/_authenticated/dre/$group'
-      path: '/$group'
+    '/_authenticated/dre_/$group': {
+      id: '/_authenticated/dre_/$group'
+      path: '/dre/$group'
       fullPath: '/dre/$group'
       preLoaderRoute: typeof AuthenticatedDreGroupRouteImport
-      parentRoute: typeof AuthenticatedDreRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/hooks/process-import-jobs': {
       id: '/api/public/hooks/process-import-jobs'
@@ -573,17 +573,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedDreRouteChildren {
-  AuthenticatedDreGroupRoute: typeof AuthenticatedDreGroupRoute
-}
-
-const AuthenticatedDreRouteChildren: AuthenticatedDreRouteChildren = {
-  AuthenticatedDreGroupRoute: AuthenticatedDreGroupRoute,
-}
-
-const AuthenticatedDreRouteWithChildren =
-  AuthenticatedDreRoute._addFileChildren(AuthenticatedDreRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisesRoute: typeof AuthenticatedAnalisesRoute
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRoute
@@ -593,7 +582,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
-  AuthenticatedDreRoute: typeof AuthenticatedDreRouteWithChildren
+  AuthenticatedDreRoute: typeof AuthenticatedDreRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRoute
   AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
@@ -609,6 +598,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedDreGroupRoute: typeof AuthenticatedDreGroupRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -620,7 +610,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
-  AuthenticatedDreRoute: AuthenticatedDreRouteWithChildren,
+  AuthenticatedDreRoute: AuthenticatedDreRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRoute,
   AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
@@ -636,6 +626,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedDreGroupRoute: AuthenticatedDreGroupRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
