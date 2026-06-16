@@ -93,16 +93,17 @@ export function DrePage() {
                 values={revenue}
                 bold
                 positive
+                group="revenue"
               />
-              <DreSection title="(-) CMV" values={cmv} negative />
+              <DreSection title="(-) CMV" values={cmv} negative group="cmv" />
               <DreSection title="(=) Lucro Bruto" values={grossProfit} bold highlight />
-              <DreSection title="(-) Fornecedores" values={supplier} negative />
-              <DreSection title="(-) Fretes" values={freight} negative />
-              <DreSection title="(-) Despesas Fixas" values={fixed} negative />
-              <DreSection title="(-) Despesas Variáveis" values={variable} negative />
-              <DreSection title="(-) Operacional" values={operational} negative />
+              <DreSection title="(-) Fornecedores" values={supplier} negative group="supplier" />
+              <DreSection title="(-) Fretes" values={freight} negative group="freight" />
+              <DreSection title="(-) Despesas Fixas" values={fixed} negative group="fixed" />
+              <DreSection title="(-) Despesas Variáveis" values={variable} negative group="variable" />
+              <DreSection title="(-) Operacional" values={operational} negative group="operational" />
               <DreSection title="(=) Resultado Operacional" values={operatingResult} bold highlight />
-              <DreSection title="(-) Outras Despesas" values={other} negative />
+              <DreSection title="(-) Outras Despesas" values={other} negative group="other" />
               <DreSection title="(=) Total Despesas" values={totalExpense} bold negative />
               <DreSection title="(=) Lucro Líquido" values={netProfit} bold highlight />
               <tr className="border-t border-border">
