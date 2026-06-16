@@ -119,14 +119,14 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
       byMethod.set(k, cur);
     };
 
-    let salesCount = 0;
+    const salesCountByMonth = new Array<number>(12).fill(0);
     let paidDaysSum = 0;
     let paidCount = 0;
 
     for (const tx of rows) {
       const m = Number(tx.date.slice(5, 7)) - 1;
       sales[m] += tx.amount_cents;
-      salesCount += 1;
+      salesCountByMonth[m] += 1;
       bumpMethod(tx.payment_method, "sales", tx.amount_cents);
 
       const pid = tx.party_id;
@@ -179,30 +179,34 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
         period_start: string;
         net_amount_cents: number;
         returns_cents: number;
+        sales_qty: number;
       }>((from, to) =>
         context.supabase
           .from("sales")
-          .select("period_start, net_amount_cents, returns_cents")
+          .select("period_start, net_amount_cents, returns_cents, sales_qty")
           .eq("company_id", data.companyId)
           .is("deleted_at", null)
           .gte("period_start", yearStart)
           .lt("period_start", yearEnd)
           .range(from, to) as unknown as PromiseLike<{
-          data: { period_start: string; net_amount_cents: number; returns_cents: number }[] | null;
+          data: { period_start: string; net_amount_cents: number; returns_cents: number; sales_qty: number }[] | null;
           error: { message: string } | null;
         }>,
       );
       const useErp = basisPref === "erp_sales" || salesRows.length > 0;
       if (useErp) {
-        for (let i = 0; i < 12; i++) sales[i] = 0;
+        for (let i = 0; i < 12; i++) {
+          sales[i] = 0;
+          salesCountByMonth[i] = 0;
+        }
         for (const r of salesRows) {
           const m = Number(r.period_start.slice(5, 7)) - 1;
           sales[m] += r.net_amount_cents - r.returns_cents;
+          salesCountByMonth[m] += r.sales_qty;
         }
-        // Recompute sales count proxy from ERP rows for avg ticket.
-        salesCount = salesRows.length;
       }
     }
+
 
 
     const totalSales = sales.reduce((a, b) => a + b, 0);
@@ -224,7 +228,8 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
     const delinquencyRate = totalSales > 0 ? totalOverdue / totalSales : 0;
     const conversion = totalSales > 0 ? totalReceipts / totalSales : 0;
     const avgDaysToReceive = paidCount > 0 ? paidDaysSum / paidCount : 0;
-    const avgTicket = salesCount > 0 ? totalSales / salesCount : 0;
+    const curSalesCount = salesCountByMonth[monthIdx];
+    const avgTicket = curSalesCount > 0 ? curSales / curSalesCount : 0;
     const overdueClients = Array.from(partyAgg.values()).filter((p) => p.open > 0).length;
 
     const topDelinquents = Array.from(partyAgg.values())
