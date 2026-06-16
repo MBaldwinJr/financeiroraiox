@@ -16,8 +16,9 @@ export function CashflowPage() {
   const range = useFilterStore((s) => s.range);
   const fetcher = useServerFn(getFinancials);
   const { data, isLoading } = useQuery({
-    queryKey: ["financials", companyId, range.year, range.month],
-    queryFn: () => fetcher({ data: { companyId: companyId!, year: range.year, month: null } }),
+    queryKey: ["financials", companyId, range.year, "cash"],
+    queryFn: () =>
+      fetcher({ data: { companyId: companyId!, year: range.year, month: null, basis: "cash" } }),
     enabled: !!companyId,
   });
 
