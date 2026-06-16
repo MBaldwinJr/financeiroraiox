@@ -42,6 +42,7 @@ import { Gauge } from "@/components/charts/gauge";
 import { Heatmap } from "@/components/charts/heatmap";
 import { formatBRL, formatBRLCompact, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { InventorySection } from "@/features/inventory/inventory-section";
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: "Dinheiro",
@@ -112,6 +113,8 @@ export function CommercialPage() {
       </header>
 
       <FilterBar />
+
+      <InventorySection />
 
       {query.isLoading && (
         <p className="py-12 text-center text-sm text-muted-foreground">Carregando…</p>
