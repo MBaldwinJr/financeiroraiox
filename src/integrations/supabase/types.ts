@@ -389,6 +389,27 @@ export type Database = {
           },
         ]
       }
+      rate_limit_buckets: {
+        Row: {
+          key: string
+          last_refill: string
+          tokens: number
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          last_refill?: string
+          tokens: number
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          last_refill?: string
+          tokens?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           company_id: string
@@ -561,6 +582,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_rate_limit: {
+        Args: {
+          _capacity: number
+          _cost?: number
+          _key: string
+          _refill_per_sec: number
+        }
+        Returns: boolean
+      }
       has_company_role: {
         Args: {
           _company_id: string
