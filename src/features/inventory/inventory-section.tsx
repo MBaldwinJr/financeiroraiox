@@ -173,31 +173,30 @@ export function InventorySection() {
               label="Valor em estoque (custo)"
               value={m.current.cost_cents}
               icon={Package}
-              accent="primary"
+              accent="info"
             />
-            <KpiCard
+            <MetricCard
               label="Giro anualizado"
-              value={m.turnover != null ? Math.round(m.turnover * 100) / 100 : 0}
               icon={RefreshCcw}
               accent="success"
-              formatter={(v) => (m.turnover != null ? `${v.toFixed(2)}×` : "—")}
+              display={m.turnover != null ? `${m.turnover.toFixed(2)}×` : "—"}
             />
-            <KpiCard
+            <MetricCard
               label="Cobertura (dias)"
-              value={m.coverageDays != null ? Math.round(m.coverageDays) : 0}
               icon={CalendarClock}
               accent="warning"
-              formatter={(v) => (m.coverageDays != null ? `${v} dias` : "—")}
+              display={m.coverageDays != null ? `${Math.round(m.coverageDays)} dias` : "—"}
             />
-            <KpiCard
+            <MetricCard
               label="Margem potencial"
-              value={m.potentialMarginCents ?? 0}
               icon={Percent}
-              accent={m.potentialMarginCents && m.potentialMarginCents > 0 ? "success" : "muted"}
-              formatter={(v) =>
+              accent={
+                m.potentialMarginCents && m.potentialMarginCents > 0 ? "success" : "muted"
+              }
+              display={
                 m.potentialMarginCents == null
                   ? "informe preço de venda"
-                  : `${formatBRL(v)} (${formatPct(m.potentialMarginPct ?? 0)})`
+                  : `${formatBRL(m.potentialMarginCents)} (${formatPct(m.potentialMarginPct ?? 0)})`
               }
             />
           </div>
