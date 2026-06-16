@@ -1,5 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
@@ -8,6 +10,7 @@ import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import type { DreGroupKey } from "@/features/dre/dre-group.functions";
 
 export function DrePage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
