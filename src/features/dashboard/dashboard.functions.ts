@@ -7,6 +7,7 @@ const Schema = z.object({
   companyId: z.string().uuid(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
+  basis: z.enum(["accrual", "cash", "erp_sales"]).optional(),
 });
 
 type DreGroup =
@@ -92,6 +93,56 @@ export const getFinancials = createServerFn({ method: "POST" })
         b.expense += tx.amount_cents;
         const g = tx.category?.dre_group ?? "other";
         if (g in b) (b as Record<string, number>)[g] += tx.amount_cents;
+      }
+    }
+
+    // Override revenue series by basis (DRE/Dashboard toggle)
+    const basis = data.basis ?? "accrual";
+    if (basis === "cash") {
+      const paidRows = await fetchAllRows<{ paid_at: string; amount_cents: number }>(
+        (from, to) =>
+          context.supabase
+            .from("transactions")
+            .select("paid_at, amount_cents")
+            .eq("company_id", data.companyId)
+            .eq("kind", "revenue")
+            .eq("status", "paid")
+            .is("deleted_at", null)
+            .gte("paid_at", yearStart)
+            .lt("paid_at", yearEnd)
+            .range(from, to) as unknown as PromiseLike<{
+            data: { paid_at: string; amount_cents: number }[] | null;
+            error: { message: string } | null;
+          }>,
+      );
+      for (const b of monthly) b.revenue = 0;
+      for (const r of paidRows) {
+        if (!r.paid_at) continue;
+        const m = Number(r.paid_at.slice(5, 7)) - 1;
+        monthly[m].revenue += r.amount_cents;
+      }
+    } else if (basis === "erp_sales") {
+      const salesRows = await fetchAllRows<{
+        period_start: string;
+        net_amount_cents: number;
+        returns_cents: number;
+      }>((from, to) =>
+        context.supabase
+          .from("sales")
+          .select("period_start, net_amount_cents, returns_cents")
+          .eq("company_id", data.companyId)
+          .is("deleted_at", null)
+          .gte("period_start", yearStart)
+          .lt("period_start", yearEnd)
+          .range(from, to) as unknown as PromiseLike<{
+          data: { period_start: string; net_amount_cents: number; returns_cents: number }[] | null;
+          error: { message: string } | null;
+        }>,
+      );
+      for (const b of monthly) b.revenue = 0;
+      for (const r of salesRows) {
+        const m = Number(r.period_start.slice(5, 7)) - 1;
+        monthly[m].revenue += r.net_amount_cents - r.returns_cents;
       }
     }
 
