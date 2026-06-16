@@ -70,6 +70,24 @@ export function fetchPaidRevenue(
   );
 }
 
+export function fetchPaidExpenses(
+  supabase: SupabaseClient,
+  { companyId, start, end }: DateWindow,
+): Promise<PaidExpenseRow[]> {
+  return fetchAllRows<PaidExpenseRow>((from, to) =>
+    supabase
+      .from("transactions")
+      .select("paid_at, amount_cents, category:categories(dre_group)")
+      .eq("company_id", companyId)
+      .eq("kind", "expense")
+      .eq("status", "paid")
+      .is("deleted_at", null)
+      .gte("paid_at", start)
+      .lt("paid_at", end)
+      .range(from, to) as PaginatedQuery<PaidExpenseRow>,
+  );
+}
+
 export function fetchErpSales(
   supabase: SupabaseClient,
   { companyId, start, end }: DateWindow,
