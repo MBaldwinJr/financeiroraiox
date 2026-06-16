@@ -6,13 +6,10 @@ import type {
   TransactionRow,
 } from "./dashboard.types";
 
-type SupabaseClient = {
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: unknown) => any;
-    };
-  };
-};
+// Loose typing: Supabase's deep generics would cause TS2589 across our helpers.
+// Repository is the single boundary that talks to the client; the rest is pure.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClient = any;
 
 type PaginatedQuery<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
 
