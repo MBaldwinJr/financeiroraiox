@@ -169,8 +169,12 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
       }
     }
 
-    // Override sales series from ERP sales PDF when basis = erp_sales
-    if ((data.basis ?? "accrual") === "erp_sales") {
+    // Sales series: prefer ERP sales PDF when basis = "erp_sales", OR
+    // automatically when basis = "accrual" and there is ERP sales data
+    // imported for the year (otherwise the user sees zeros after importing
+    // the PDF, since transactions are receipts, not sales).
+    const basisPref = data.basis ?? "accrual";
+    if (basisPref !== "cash") {
       const salesRows = await fetchAllRows<{
         period_start: string;
         net_amount_cents: number;
@@ -188,10 +192,15 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
           error: { message: string } | null;
         }>,
       );
-      for (let i = 0; i < 12; i++) sales[i] = 0;
-      for (const r of salesRows) {
-        const m = Number(r.period_start.slice(5, 7)) - 1;
-        sales[m] += r.net_amount_cents - r.returns_cents;
+      const useErp = basisPref === "erp_sales" || salesRows.length > 0;
+      if (useErp) {
+        for (let i = 0; i < 12; i++) sales[i] = 0;
+        for (const r of salesRows) {
+          const m = Number(r.period_start.slice(5, 7)) - 1;
+          sales[m] += r.net_amount_cents - r.returns_cents;
+        }
+        // Recompute sales count proxy from ERP rows for avg ticket.
+        salesCount = salesRows.length;
       }
     }
 
