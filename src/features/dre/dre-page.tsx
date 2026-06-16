@@ -140,6 +140,7 @@ function DreSection({
   highlight,
   positive,
   negative,
+  group,
 }: {
   title: string;
   values: number[];
@@ -147,6 +148,7 @@ function DreSection({
   highlight?: boolean;
   positive?: boolean;
   negative?: boolean;
+  group?: DreGroupKey;
 }) {
   const total = values.reduce((a, b) => a + b, 0);
   return (
@@ -157,7 +159,20 @@ function DreSection({
         bold && "font-semibold",
       )}
     >
-      <td className="sticky left-0 z-10 bg-card px-3 py-2 text-left">{title}</td>
+      <td className="sticky left-0 z-10 bg-card px-3 py-2 text-left">
+        {group ? (
+          <Link
+            to="/dre/$group"
+            params={{ group }}
+            className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
+          >
+            {title}
+            <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+        ) : (
+          title
+        )}
+      </td>
       {values.map((v, i) => (
         <td
           key={i}
