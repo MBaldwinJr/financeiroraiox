@@ -25,6 +25,7 @@ import {
   Gauge as GaugeIcon,
   Scale,
   HandCoins,
+  Package,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
@@ -66,6 +67,7 @@ const NAV_MAIN = [
   { to: "/relatorios", label: "Relatórios", icon: FileText },
   { to: "/analises", label: "Análises", icon: Activity },
   { to: "/comercial", label: "Performance Comercial", icon: HandCoins },
+  { to: "/estoque", label: "Estoque", icon: Package },
   { to: "/ia", label: "IA Financeira", icon: Sparkles },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
