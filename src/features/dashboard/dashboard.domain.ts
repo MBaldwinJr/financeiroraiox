@@ -1,8 +1,10 @@
 import {
   emptyMonthBucket,
   PAYMENT_METHODS,
+  type DreGroup,
   type ErpSaleRow,
   type MonthBucket,
+  type PaidExpenseRow,
   type PaidRevenueRow,
   type PaymentMethod,
   type PrevMonthBucket,
@@ -69,6 +71,36 @@ export function applyRevenueBasis(
   // erp_sales
   for (const r of salesRows) {
     monthly[monthIndex(r.period_start)].revenue += r.net_amount_cents - r.returns_cents;
+  }
+  return monthly;
+}
+
+const EXPENSE_GROUPS: readonly DreGroup[] = [
+  "cmv",
+  "supplier",
+  "freight",
+  "fixed",
+  "variable",
+  "operational",
+  "other",
+];
+
+export function applyCashExpenses(
+  monthly: MonthBucket[],
+  paidExpenseRows: readonly PaidExpenseRow[],
+): MonthBucket[] {
+  for (const b of monthly) {
+    b.expense = 0;
+    for (const g of EXPENSE_GROUPS) {
+      (b as unknown as Record<string, number>)[g] = 0;
+    }
+  }
+  for (const r of paidExpenseRows) {
+    if (!r.paid_at) continue;
+    const b = monthly[monthIndex(r.paid_at)];
+    b.expense += r.amount_cents;
+    const group = r.category?.dre_group ?? "other";
+    (b as unknown as Record<string, number>)[group] += r.amount_cents;
   }
   return monthly;
 }
