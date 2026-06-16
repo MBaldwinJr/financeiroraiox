@@ -1,8 +1,10 @@
 import {
   emptyMonthBucket,
   PAYMENT_METHODS,
+  type DreGroup,
   type ErpSaleRow,
   type MonthBucket,
+  type PaidExpenseRow,
   type PaidRevenueRow,
   type PaymentMethod,
   type PrevMonthBucket,
