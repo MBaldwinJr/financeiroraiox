@@ -5,6 +5,8 @@ export interface DateRange {
   month: number | null; // null = ano inteiro
 }
 
+export type RevenueBasis = "accrual" | "cash" | "erp_sales";
+
 interface FilterStore {
   range: DateRange;
   categoryIds: string[];
@@ -12,8 +14,10 @@ interface FilterStore {
   paymentMethods: string[];
   bankAccountIds: string[];
   partyIds: string[];
+  revenueBasis: RevenueBasis;
   setRange: (r: DateRange) => void;
   setMulti: (key: MultiKey, ids: string[]) => void;
+  setRevenueBasis: (b: RevenueBasis) => void;
   clear: () => void;
 }
 
@@ -29,8 +33,10 @@ export const useFilterStore = create<FilterStore>((set) => ({
   paymentMethods: [],
   bankAccountIds: [],
   partyIds: [],
+  revenueBasis: "accrual",
   setRange: (range) => set({ range }),
   setMulti: (key, ids) => set({ [key]: ids } as Pick<FilterStore, MultiKey>),
+  setRevenueBasis: (revenueBasis) => set({ revenueBasis }),
   clear: () =>
     set({
       range: defaultRange,
@@ -39,5 +45,6 @@ export const useFilterStore = create<FilterStore>((set) => ({
       paymentMethods: [],
       bankAccountIds: [],
       partyIds: [],
+      revenueBasis: "accrual",
     }),
 }));
