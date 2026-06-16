@@ -105,11 +105,10 @@ export function SalesPage() {
           accent="info"
         />
         <KpiCard
-          label="Top Vendedor"
+          label={`Top: ${top?.sellerName ?? "—"}`}
           value={top?.net ?? 0}
           icon={Users}
           accent="info"
-          subtitle={top?.sellerName ?? "—"}
         />
       </section>
 
