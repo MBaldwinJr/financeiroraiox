@@ -113,6 +113,8 @@ export function CommercialPage() {
 
       <FilterBar />
 
+      <InventorySection />
+
       {query.isLoading && (
         <p className="py-12 text-center text-sm text-muted-foreground">Carregando…</p>
       )}
