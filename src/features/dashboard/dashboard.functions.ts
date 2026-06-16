@@ -57,15 +57,14 @@ export const getFinancials = createServerFn({ method: "POST" })
     const prev = yearWindow(data.year - 1);
     const basis: RevenueBasis = data.basis ?? "accrual";
 
-    const [txs, prevRows, basisRows] = await Promise.all([
-      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end }),
-      fetchPrevYearTransactions(context.supabase, {
-        companyId: data.companyId,
-        start: prev.start,
-        end: prev.end,
-      }),
-      loadBasisRows(context.supabase, basis, data.companyId, start, end),
-    ]);
+    const window = { companyId: data.companyId, start, end };
+    const txs = await fetchYearTransactions(context.supabase, window);
+    const prevRows = await fetchPrevYearTransactions(context.supabase, {
+      companyId: data.companyId,
+      start: prev.start,
+      end: prev.end,
+    });
+    const basisRows = await loadBasisRows(context.supabase, basis, data.companyId, start, end);
 
     const { monthly, byPayment } = bucketTransactionsByMonth(txs);
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
