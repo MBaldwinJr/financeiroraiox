@@ -61,13 +61,14 @@ function semaphore(days: number): string {
 export function CommercialPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
+  const basis = useFilterStore((s) => s.revenueBasis);
   const fetcher = useServerFn(getCommercialPerformance);
 
   const query = useQuery({
-    queryKey: ["commercial", companyId, range.year, range.month],
+    queryKey: ["commercial", companyId, range.year, range.month, basis],
     queryFn: () =>
       fetcher({
-        data: { companyId: companyId!, year: range.year, month: range.month },
+        data: { companyId: companyId!, year: range.year, month: range.month, basis },
       }),
     enabled: !!companyId,
   });
