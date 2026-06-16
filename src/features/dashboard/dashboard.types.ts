@@ -46,6 +46,12 @@ export interface PaidRevenueRow {
   amount_cents: number;
 }
 
+export interface PaidExpenseRow {
+  paid_at: string;
+  amount_cents: number;
+  category: { dre_group: DreGroup } | null;
+}
+
 export interface ErpSaleRow {
   period_start: string;
   net_amount_cents: number;
