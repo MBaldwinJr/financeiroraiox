@@ -228,7 +228,8 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
     const delinquencyRate = totalSales > 0 ? totalOverdue / totalSales : 0;
     const conversion = totalSales > 0 ? totalReceipts / totalSales : 0;
     const avgDaysToReceive = paidCount > 0 ? paidDaysSum / paidCount : 0;
-    const avgTicket = salesCount > 0 ? totalSales / salesCount : 0;
+    const curSalesCount = salesCountByMonth[monthIdx];
+    const avgTicket = curSalesCount > 0 ? curSales / curSalesCount : 0;
     const overdueClients = Array.from(partyAgg.values()).filter((p) => p.open > 0).length;
 
     const topDelinquents = Array.from(partyAgg.values())
