@@ -231,10 +231,17 @@ async function runOnce(jobId?: string) {
   return processJob(claimed as unknown as Parameters<typeof processJob>[0]);
 }
 
+const POST_LIMIT = { route: "process-import-jobs:POST", capacity: 30, refillPerSec: 0.5 } as const;
+const GET_LIMIT = { route: "process-import-jobs:GET", capacity: 60, refillPerSec: 1 } as const;
+
 export const Route = createFileRoute("/api/public/hooks/process-import-jobs")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { enforceRateLimit, rateLimitedResponse } = await import("@/lib/rate-limit.server");
+        const { allowed } = await enforceRateLimit(POST_LIMIT);
+        if (!allowed) return rateLimitedResponse(30);
+
         let jobId: string | undefined;
         try {
           const body = (await request.json()) as { jobId?: string };
@@ -249,6 +256,10 @@ export const Route = createFileRoute("/api/public/hooks/process-import-jobs")({
         });
       },
       GET: async () => {
+        const { enforceRateLimit, rateLimitedResponse } = await import("@/lib/rate-limit.server");
+        const { allowed } = await enforceRateLimit(GET_LIMIT);
+        if (!allowed) return rateLimitedResponse(15);
+
         const result = await runOnce();
         return new Response(JSON.stringify({ ok: true, result }), {
           status: 200,
@@ -258,3 +269,4 @@ export const Route = createFileRoute("/api/public/hooks/process-import-jobs")({
     },
   },
 });
+
