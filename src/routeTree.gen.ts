@@ -28,6 +28,7 @@ import { Route as AuthenticatedDespesasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedComercialRouteImport } from './routes/_authenticated/comercial'
 import { Route as AuthenticatedCentrosCustosRouteImport } from './routes/_authenticated/centros-custos'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedAnalisesRouteImport } from './routes/_authenticated/analises'
@@ -132,6 +133,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedComercialRoute = AuthenticatedComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCentrosCustosRoute =
   AuthenticatedCentrosCustosRouteImport.update({
     id: '/centros-custos',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/analises': typeof AuthenticatedAnalisesRoute
   '/cadastros': typeof AuthenticatedCadastrosRoute
   '/centros-custos': typeof AuthenticatedCentrosCustosRoute
+  '/comercial': typeof AuthenticatedComercialRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/analises': typeof AuthenticatedAnalisesRoute
   '/cadastros': typeof AuthenticatedCadastrosRoute
   '/centros-custos': typeof AuthenticatedCentrosCustosRoute
+  '/comercial': typeof AuthenticatedComercialRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/_authenticated/analises': typeof AuthenticatedAnalisesRoute
   '/_authenticated/cadastros': typeof AuthenticatedCadastrosRoute
   '/_authenticated/centros-custos': typeof AuthenticatedCentrosCustosRoute
+  '/_authenticated/comercial': typeof AuthenticatedComercialRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/analises'
     | '/cadastros'
     | '/centros-custos'
+    | '/comercial'
     | '/configuracoes'
     | '/contas'
     | '/dashboard'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/analises'
     | '/cadastros'
     | '/centros-custos'
+    | '/comercial'
     | '/configuracoes'
     | '/contas'
     | '/dashboard'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/_authenticated/analises'
     | '/_authenticated/cadastros'
     | '/_authenticated/centros-custos'
+    | '/_authenticated/comercial'
     | '/_authenticated/configuracoes'
     | '/_authenticated/contas'
     | '/_authenticated/dashboard'
@@ -446,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/comercial': {
+      id: '/_authenticated/comercial'
+      path: '/comercial'
+      fullPath: '/comercial'
+      preLoaderRoute: typeof AuthenticatedComercialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/centros-custos': {
       id: '/_authenticated/centros-custos'
       path: '/centros-custos'
@@ -481,6 +500,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisesRoute: typeof AuthenticatedAnalisesRoute
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRoute
   AuthenticatedCentrosCustosRoute: typeof AuthenticatedCentrosCustosRoute
+  AuthenticatedComercialRoute: typeof AuthenticatedComercialRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -504,6 +524,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalisesRoute: AuthenticatedAnalisesRoute,
   AuthenticatedCadastrosRoute: AuthenticatedCadastrosRoute,
   AuthenticatedCentrosCustosRoute: AuthenticatedCentrosCustosRoute,
+  AuthenticatedComercialRoute: AuthenticatedComercialRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
