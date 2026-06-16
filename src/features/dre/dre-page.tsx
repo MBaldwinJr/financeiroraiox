@@ -1,5 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
@@ -8,6 +10,7 @@ import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import type { DreGroupKey } from "@/features/dre/dre-group.functions";
 
 export function DrePage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
@@ -90,16 +93,17 @@ export function DrePage() {
                 values={revenue}
                 bold
                 positive
+                group="revenue"
               />
-              <DreSection title="(-) CMV" values={cmv} negative />
+              <DreSection title="(-) CMV" values={cmv} negative group="cmv" />
               <DreSection title="(=) Lucro Bruto" values={grossProfit} bold highlight />
-              <DreSection title="(-) Fornecedores" values={supplier} negative />
-              <DreSection title="(-) Fretes" values={freight} negative />
-              <DreSection title="(-) Despesas Fixas" values={fixed} negative />
-              <DreSection title="(-) Despesas Variáveis" values={variable} negative />
-              <DreSection title="(-) Operacional" values={operational} negative />
+              <DreSection title="(-) Fornecedores" values={supplier} negative group="supplier" />
+              <DreSection title="(-) Fretes" values={freight} negative group="freight" />
+              <DreSection title="(-) Despesas Fixas" values={fixed} negative group="fixed" />
+              <DreSection title="(-) Despesas Variáveis" values={variable} negative group="variable" />
+              <DreSection title="(-) Operacional" values={operational} negative group="operational" />
               <DreSection title="(=) Resultado Operacional" values={operatingResult} bold highlight />
-              <DreSection title="(-) Outras Despesas" values={other} negative />
+              <DreSection title="(-) Outras Despesas" values={other} negative group="other" />
               <DreSection title="(=) Total Despesas" values={totalExpense} bold negative />
               <DreSection title="(=) Lucro Líquido" values={netProfit} bold highlight />
               <tr className="border-t border-border">
@@ -136,6 +140,7 @@ function DreSection({
   highlight,
   positive,
   negative,
+  group,
 }: {
   title: string;
   values: number[];
@@ -143,6 +148,7 @@ function DreSection({
   highlight?: boolean;
   positive?: boolean;
   negative?: boolean;
+  group?: DreGroupKey;
 }) {
   const total = values.reduce((a, b) => a + b, 0);
   return (
@@ -153,7 +159,20 @@ function DreSection({
         bold && "font-semibold",
       )}
     >
-      <td className="sticky left-0 z-10 bg-card px-3 py-2 text-left">{title}</td>
+      <td className="sticky left-0 z-10 bg-card px-3 py-2 text-left">
+        {group ? (
+          <Link
+            to="/dre/$group"
+            params={{ group }}
+            className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
+          >
+            {title}
+            <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+        ) : (
+          title
+        )}
+      </td>
       {values.map((v, i) => (
         <td
           key={i}

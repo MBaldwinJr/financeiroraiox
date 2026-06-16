@@ -35,6 +35,7 @@ import { Route as AuthenticatedComercialRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCentrosCustosRouteImport } from './routes/_authenticated/centros-custos'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedAnalisesRouteImport } from './routes/_authenticated/analises'
+import { Route as AuthenticatedDreGroupRouteImport } from './routes/_authenticated/dre.$group'
 import { Route as ApiPublicHooksProcessImportJobsRouteImport } from './routes/api/public/hooks/process-import-jobs'
 
 const AuthRoute = AuthRouteImport.update({
@@ -173,6 +174,11 @@ const AuthenticatedAnalisesRoute = AuthenticatedAnalisesRouteImport.update({
   path: '/analises',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDreGroupRoute = AuthenticatedDreGroupRouteImport.update({
+  id: '/$group',
+  path: '/$group',
+  getParentRoute: () => AuthenticatedDreRoute,
+} as any)
 const ApiPublicHooksProcessImportJobsRoute =
   ApiPublicHooksProcessImportJobsRouteImport.update({
     id: '/api/public/hooks/process-import-jobs',
@@ -191,7 +197,7 @@ export interface FileRoutesByFullPath {
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
-  '/dre': typeof AuthenticatedDreRoute
+  '/dre': typeof AuthenticatedDreRouteWithChildren
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/dre/$group': typeof AuthenticatedDreGroupRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesByTo {
@@ -218,7 +225,7 @@ export interface FileRoutesByTo {
   '/contas': typeof AuthenticatedContasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/despesas': typeof AuthenticatedDespesasRoute
-  '/dre': typeof AuthenticatedDreRoute
+  '/dre': typeof AuthenticatedDreRouteWithChildren
   '/estoque': typeof AuthenticatedEstoqueRoute
   '/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/ia': typeof AuthenticatedIaRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/': typeof AuthenticatedIndexRoute
+  '/dre/$group': typeof AuthenticatedDreGroupRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesById {
@@ -248,7 +256,7 @@ export interface FileRoutesById {
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/despesas': typeof AuthenticatedDespesasRoute
-  '/_authenticated/dre': typeof AuthenticatedDreRoute
+  '/_authenticated/dre': typeof AuthenticatedDreRouteWithChildren
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRoute
   '/_authenticated/fluxo-caixa': typeof AuthenticatedFluxoCaixaRoute
   '/_authenticated/ia': typeof AuthenticatedIaRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/dre/$group': typeof AuthenticatedDreGroupRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRouteTypes {
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/reconciliacao'
     | '/relatorios'
     | '/vendas'
+    | '/dre/$group'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/vendas'
     | '/'
+    | '/dre/$group'
     | '/api/public/hooks/process-import-jobs'
   id:
     | '__root__'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/vendas'
     | '/_authenticated/'
+    | '/_authenticated/dre/$group'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesById: FileRoutesById
 }
@@ -544,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalisesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dre/$group': {
+      id: '/_authenticated/dre/$group'
+      path: '/$group'
+      fullPath: '/dre/$group'
+      preLoaderRoute: typeof AuthenticatedDreGroupRouteImport
+      parentRoute: typeof AuthenticatedDreRoute
+    }
     '/api/public/hooks/process-import-jobs': {
       id: '/api/public/hooks/process-import-jobs'
       path: '/api/public/hooks/process-import-jobs'
@@ -554,6 +573,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedDreRouteChildren {
+  AuthenticatedDreGroupRoute: typeof AuthenticatedDreGroupRoute
+}
+
+const AuthenticatedDreRouteChildren: AuthenticatedDreRouteChildren = {
+  AuthenticatedDreGroupRoute: AuthenticatedDreGroupRoute,
+}
+
+const AuthenticatedDreRouteWithChildren =
+  AuthenticatedDreRoute._addFileChildren(AuthenticatedDreRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisesRoute: typeof AuthenticatedAnalisesRoute
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRoute
@@ -563,7 +593,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDespesasRoute: typeof AuthenticatedDespesasRoute
-  AuthenticatedDreRoute: typeof AuthenticatedDreRoute
+  AuthenticatedDreRoute: typeof AuthenticatedDreRouteWithChildren
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRoute
   AuthenticatedFluxoCaixaRoute: typeof AuthenticatedFluxoCaixaRoute
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
@@ -590,7 +620,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDespesasRoute: AuthenticatedDespesasRoute,
-  AuthenticatedDreRoute: AuthenticatedDreRoute,
+  AuthenticatedDreRoute: AuthenticatedDreRouteWithChildren,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRoute,
   AuthenticatedFluxoCaixaRoute: AuthenticatedFluxoCaixaRoute,
   AuthenticatedIaRoute: AuthenticatedIaRoute,
