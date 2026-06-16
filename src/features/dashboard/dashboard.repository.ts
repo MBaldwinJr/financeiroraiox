@@ -24,7 +24,7 @@ export function fetchYearTransactions(
   { companyId, start, end }: DateWindow,
 ): Promise<TransactionRow[]> {
   return fetchAllRows<TransactionRow>((from, to) =>
-    (supabase as any)
+    supabase
       .from("transactions")
       .select("date, amount_cents, kind, payment_method, category:categories(dre_group)")
       .eq("company_id", companyId)
@@ -40,7 +40,7 @@ export function fetchPrevYearTransactions(
   { companyId, start, end }: DateWindow,
 ): Promise<PrevTransactionRow[]> {
   return fetchAllRows<PrevTransactionRow>((from, to) =>
-    (supabase as any)
+    supabase
       .from("transactions")
       .select("date, amount_cents, kind")
       .eq("company_id", companyId)
@@ -56,7 +56,7 @@ export function fetchPaidRevenue(
   { companyId, start, end }: DateWindow,
 ): Promise<PaidRevenueRow[]> {
   return fetchAllRows<PaidRevenueRow>((from, to) =>
-    (supabase as any)
+    supabase
       .from("transactions")
       .select("paid_at, amount_cents")
       .eq("company_id", companyId)
@@ -74,7 +74,7 @@ export function fetchErpSales(
   { companyId, start, end }: DateWindow,
 ): Promise<ErpSaleRow[]> {
   return fetchAllRows<ErpSaleRow>((from, to) =>
-    (supabase as any)
+    supabase
       .from("sales")
       .select("period_start, net_amount_cents, returns_cents")
       .eq("company_id", companyId)
