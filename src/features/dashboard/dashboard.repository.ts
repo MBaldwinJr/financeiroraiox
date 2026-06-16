@@ -1,6 +1,7 @@
 import { fetchAllRows } from "@/lib/supabase-paginate";
 import type {
   ErpSaleRow,
+  PaidExpenseRow,
   PaidRevenueRow,
   PrevTransactionRow,
   TransactionRow,
