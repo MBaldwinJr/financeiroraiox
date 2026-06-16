@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { listBankAccounts, listCategories, listCostCenters } from "@/features/catalog/catalog.functions";
 import { MONTH_LABELS } from "@/lib/money";
+import { RevenueBasisToggle } from "@/components/layout/revenue-basis-toggle";
 import { X } from "lucide-react";
 
 const YEARS = (() => {
@@ -112,11 +113,14 @@ export function FilterBar() {
         onChange={(ids) => setMulti("paymentMethods", ids)}
       />
 
-      {hasFilters && (
-        <Button variant="ghost" size="sm" onClick={clear} className="ml-auto">
-          <X className="mr-1 h-4 w-4" /> Limpar filtros
-        </Button>
-      )}
+      <div className="ml-auto flex items-center gap-3">
+        <RevenueBasisToggle />
+        {hasFilters && (
+          <Button variant="ghost" size="sm" onClick={clear}>
+            <X className="mr-1 h-4 w-4" /> Limpar filtros
+          </Button>
+        )}
+      </div>
     </Card>
   );
 }
