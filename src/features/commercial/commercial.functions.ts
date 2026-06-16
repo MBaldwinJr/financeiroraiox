@@ -7,6 +7,7 @@ const Schema = z.object({
   companyId: z.string().uuid(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
+  basis: z.enum(["accrual", "cash", "erp_sales"]).optional(),
 });
 
 interface TxRow {
@@ -167,6 +168,33 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
         }
       }
     }
+
+    // Override sales series from ERP sales PDF when basis = erp_sales
+    if ((data.basis ?? "accrual") === "erp_sales") {
+      const salesRows = await fetchAllRows<{
+        period_start: string;
+        net_amount_cents: number;
+        returns_cents: number;
+      }>((from, to) =>
+        context.supabase
+          .from("sales")
+          .select("period_start, net_amount_cents, returns_cents")
+          .eq("company_id", data.companyId)
+          .is("deleted_at", null)
+          .gte("period_start", yearStart)
+          .lt("period_start", yearEnd)
+          .range(from, to) as unknown as PromiseLike<{
+          data: { period_start: string; net_amount_cents: number; returns_cents: number }[] | null;
+          error: { message: string } | null;
+        }>,
+      );
+      for (let i = 0; i < 12; i++) sales[i] = 0;
+      for (const r of salesRows) {
+        const m = Number(r.period_start.slice(5, 7)) - 1;
+        sales[m] += r.net_amount_cents - r.returns_cents;
+      }
+    }
+
 
     const totalSales = sales.reduce((a, b) => a + b, 0);
     const totalReceipts = receipts.reduce((a, b) => a + b, 0);
