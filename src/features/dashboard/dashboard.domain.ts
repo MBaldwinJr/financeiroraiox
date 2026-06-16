@@ -42,7 +42,7 @@ export function bucketTransactionsByMonth(txs: readonly TransactionRow[]): Bucke
     }
     bucket.expense += tx.amount_cents;
     const group = tx.category?.dre_group ?? "other";
-    (bucket as Record<string, number>)[group] += tx.amount_cents;
+    (bucket as unknown as Record<string, number>)[group] += tx.amount_cents;
   }
 
   return { monthly, byPayment };
