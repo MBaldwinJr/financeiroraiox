@@ -119,14 +119,14 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
       byMethod.set(k, cur);
     };
 
-    let salesCount = 0;
+    const salesCountByMonth = new Array<number>(12).fill(0);
     let paidDaysSum = 0;
     let paidCount = 0;
 
     for (const tx of rows) {
       const m = Number(tx.date.slice(5, 7)) - 1;
       sales[m] += tx.amount_cents;
-      salesCount += 1;
+      salesCountByMonth[m] += 1;
       bumpMethod(tx.payment_method, "sales", tx.amount_cents);
 
       const pid = tx.party_id;
