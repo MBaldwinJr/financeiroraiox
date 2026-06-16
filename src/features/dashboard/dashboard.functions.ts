@@ -39,16 +39,23 @@ async function loadBasisRows(
   companyId: string,
   start: string,
   end: string,
-): Promise<{ paidRows: PaidRevenueRow[]; salesRows: ErpSaleRow[] }> {
+): Promise<{
+  paidRows: PaidRevenueRow[];
+  salesRows: ErpSaleRow[];
+  paidExpenseRows: PaidExpenseRow[];
+}> {
   if (basis === "cash") {
-    const paidRows = await fetchPaidRevenue(supabase, { companyId, start, end });
-    return { paidRows, salesRows: [] };
+    const [paidRows, paidExpenseRows] = await Promise.all([
+      fetchPaidRevenue(supabase, { companyId, start, end }),
+      fetchPaidExpenses(supabase, { companyId, start, end }),
+    ]);
+    return { paidRows, salesRows: [], paidExpenseRows };
   }
   if (basis === "erp_sales") {
     const salesRows = await fetchErpSales(supabase, { companyId, start, end });
-    return { paidRows: [], salesRows };
+    return { paidRows: [], salesRows, paidExpenseRows: [] };
   }
-  return { paidRows: [], salesRows: [] };
+  return { paidRows: [], salesRows: [], paidExpenseRows: [] };
 }
 
 export const getFinancials = createServerFn({ method: "POST" })
@@ -73,6 +80,9 @@ export const getFinancials = createServerFn({ method: "POST" })
 
     const { monthly, byPayment } = bucketTransactionsByMonth(txs);
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
+    if (basis === "cash") {
+      applyCashExpenses(monthly, basisRows.paidExpenseRows);
+    }
 
     const prevMonthly = bucketPrevYear(prevRows);
     const prevYearTotal = sumPrevYearTotals(prevRows);
