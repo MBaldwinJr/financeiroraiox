@@ -57,8 +57,11 @@ export const getFinancials = createServerFn({ method: "POST" })
     const prev = yearWindow(data.year - 1);
     const basis: RevenueBasis = data.basis ?? "accrual";
 
-    const window = { companyId: data.companyId, start, end };
-    const txs = await fetchYearTransactions(context.supabase, window);
+    const txs = await fetchYearTransactions(context.supabase, {
+      companyId: data.companyId,
+      start,
+      end,
+    });
     const prevRows = await fetchPrevYearTransactions(context.supabase, {
       companyId: data.companyId,
       start: prev.start,
