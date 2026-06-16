@@ -348,6 +348,53 @@ export type Database = {
           },
         ]
       }
+      inventory_snapshots: {
+        Row: {
+          company_id: string
+          cost_cents: number
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          notes: string | null
+          retail_cents: number | null
+          snapshot_date: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          cost_cents: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          notes?: string | null
+          retail_cents?: number | null
+          snapshot_date: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          cost_cents?: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          notes?: string | null
+          retail_cents?: number | null
+          snapshot_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parties: {
         Row: {
           company_id: string
