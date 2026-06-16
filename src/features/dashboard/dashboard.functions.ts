@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  applyCashExpenses,
   applyRevenueBasis,
   bucketPrevYear,
   bucketTransactionsByMonth,
@@ -13,11 +14,12 @@ import {
 } from "./dashboard.domain";
 import {
   fetchErpSales,
+  fetchPaidExpenses,
   fetchPaidRevenue,
   fetchPrevYearTransactions,
   fetchYearTransactions,
 } from "./dashboard.repository";
-import type { ErpSaleRow, PaidRevenueRow, RevenueBasis } from "./dashboard.types";
+import type { ErpSaleRow, PaidExpenseRow, PaidRevenueRow, RevenueBasis } from "./dashboard.types";
 
 const Schema = z.object({
   companyId: z.string().uuid(),
