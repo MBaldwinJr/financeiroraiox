@@ -389,6 +389,71 @@ export type Database = {
           },
         ]
       }
+      sales: {
+        Row: {
+          company_id: string
+          cost_cents: number
+          created_at: string
+          deleted_at: string | null
+          id: string
+          imported_at: string
+          items_qty: number
+          net_amount_cents: number
+          period_end: string
+          period_start: string
+          returns_cents: number
+          sales_qty: number
+          seller_code: string | null
+          seller_name: string
+          source_file: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          cost_cents?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          imported_at?: string
+          items_qty?: number
+          net_amount_cents?: number
+          period_end: string
+          period_start: string
+          returns_cents?: number
+          sales_qty?: number
+          seller_code?: string | null
+          seller_name: string
+          source_file?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          cost_cents?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          imported_at?: string
+          items_qty?: number
+          net_amount_cents?: number
+          period_end?: string
+          period_start?: string
+          returns_cents?: number
+          sales_qty?: number
+          seller_code?: string | null
+          seller_name?: string
+          source_file?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount_cents: number
