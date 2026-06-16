@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedReconciliacaoRouteImport } from './routes/_authenticated/reconciliacao'
 import { Route as AuthenticatedReceitasRouteImport } from './routes/_authenticated/receitas'
@@ -19,6 +20,7 @@ import { Route as AuthenticatedRaioXRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedMapeamentosErpRouteImport } from './routes/_authenticated/mapeamentos-erp'
 import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenticated/lancamentos'
+import { Route as AuthenticatedImportarVendasRouteImport } from './routes/_authenticated/importar-vendas'
 import { Route as AuthenticatedImportarErpRouteImport } from './routes/_authenticated/importar-erp'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedIaRouteImport } from './routes/_authenticated/ia'
@@ -46,6 +48,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
@@ -84,6 +91,12 @@ const AuthenticatedLancamentosRoute =
   AuthenticatedLancamentosRouteImport.update({
     id: '/lancamentos',
     path: '/lancamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedImportarVendasRoute =
+  AuthenticatedImportarVendasRouteImport.update({
+    id: '/importar-vendas',
+    path: '/importar-vendas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedImportarErpRoute =
@@ -177,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/ia': typeof AuthenticatedIaRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/importar-erp': typeof AuthenticatedImportarErpRoute
+  '/importar-vendas': typeof AuthenticatedImportarVendasRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
   '/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/metas': typeof AuthenticatedMetasRoute
@@ -184,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/receitas': typeof AuthenticatedReceitasRoute
   '/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesByTo {
@@ -201,6 +216,7 @@ export interface FileRoutesByTo {
   '/ia': typeof AuthenticatedIaRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/importar-erp': typeof AuthenticatedImportarErpRoute
+  '/importar-vendas': typeof AuthenticatedImportarVendasRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
   '/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/metas': typeof AuthenticatedMetasRoute
@@ -208,6 +224,7 @@ export interface FileRoutesByTo {
   '/receitas': typeof AuthenticatedReceitasRoute
   '/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
@@ -228,6 +245,7 @@ export interface FileRoutesById {
   '/_authenticated/ia': typeof AuthenticatedIaRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/importar-erp': typeof AuthenticatedImportarErpRoute
+  '/_authenticated/importar-vendas': typeof AuthenticatedImportarVendasRoute
   '/_authenticated/lancamentos': typeof AuthenticatedLancamentosRoute
   '/_authenticated/mapeamentos-erp': typeof AuthenticatedMapeamentosErpRoute
   '/_authenticated/metas': typeof AuthenticatedMetasRoute
@@ -235,6 +253,7 @@ export interface FileRoutesById {
   '/_authenticated/receitas': typeof AuthenticatedReceitasRoute
   '/_authenticated/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
@@ -256,6 +275,7 @@ export interface FileRouteTypes {
     | '/ia'
     | '/importar'
     | '/importar-erp'
+    | '/importar-vendas'
     | '/lancamentos'
     | '/mapeamentos-erp'
     | '/metas'
@@ -263,6 +283,7 @@ export interface FileRouteTypes {
     | '/receitas'
     | '/reconciliacao'
     | '/relatorios'
+    | '/vendas'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -280,6 +301,7 @@ export interface FileRouteTypes {
     | '/ia'
     | '/importar'
     | '/importar-erp'
+    | '/importar-vendas'
     | '/lancamentos'
     | '/mapeamentos-erp'
     | '/metas'
@@ -287,6 +309,7 @@ export interface FileRouteTypes {
     | '/receitas'
     | '/reconciliacao'
     | '/relatorios'
+    | '/vendas'
     | '/'
     | '/api/public/hooks/process-import-jobs'
   id:
@@ -306,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ia'
     | '/_authenticated/importar'
     | '/_authenticated/importar-erp'
+    | '/_authenticated/importar-vendas'
     | '/_authenticated/lancamentos'
     | '/_authenticated/mapeamentos-erp'
     | '/_authenticated/metas'
@@ -313,6 +337,7 @@ export interface FileRouteTypes {
     | '/_authenticated/receitas'
     | '/_authenticated/reconciliacao'
     | '/_authenticated/relatorios'
+    | '/_authenticated/vendas'
     | '/_authenticated/'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesById: FileRoutesById
@@ -344,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/vendas': {
+      id: '/_authenticated/vendas'
+      path: '/vendas'
+      fullPath: '/vendas'
+      preLoaderRoute: typeof AuthenticatedVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios': {
@@ -393,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/lancamentos'
       fullPath: '/lancamentos'
       preLoaderRoute: typeof AuthenticatedLancamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/importar-vendas': {
+      id: '/_authenticated/importar-vendas'
+      path: '/importar-vendas'
+      fullPath: '/importar-vendas'
+      preLoaderRoute: typeof AuthenticatedImportarVendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/importar-erp': {
@@ -510,6 +549,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIaRoute: typeof AuthenticatedIaRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedImportarErpRoute: typeof AuthenticatedImportarErpRoute
+  AuthenticatedImportarVendasRoute: typeof AuthenticatedImportarVendasRoute
   AuthenticatedLancamentosRoute: typeof AuthenticatedLancamentosRoute
   AuthenticatedMapeamentosErpRoute: typeof AuthenticatedMapeamentosErpRoute
   AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
@@ -517,6 +557,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReceitasRoute: typeof AuthenticatedReceitasRoute
   AuthenticatedReconciliacaoRoute: typeof AuthenticatedReconciliacaoRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -534,6 +575,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIaRoute: AuthenticatedIaRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedImportarErpRoute: AuthenticatedImportarErpRoute,
+  AuthenticatedImportarVendasRoute: AuthenticatedImportarVendasRoute,
   AuthenticatedLancamentosRoute: AuthenticatedLancamentosRoute,
   AuthenticatedMapeamentosErpRoute: AuthenticatedMapeamentosErpRoute,
   AuthenticatedMetasRoute: AuthenticatedMetasRoute,
@@ -541,6 +583,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReceitasRoute: AuthenticatedReceitasRoute,
   AuthenticatedReconciliacaoRoute: AuthenticatedReconciliacaoRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
