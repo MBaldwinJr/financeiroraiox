@@ -208,7 +208,7 @@ export const getCommercialPerformance = createServerFn({ method: "POST" })
       .filter((p) => p.open > 0)
       .sort((a, b) => b.open - a.open)
       .slice(0, 12)
-      .map((p) => ({ name: p.name, months: p.monthsOverdue }));
+      .map((p) => ({ category: p.name, months: p.monthsOverdue }));
 
     const paymentMethods = Array.from(byMethod.entries()).map(([method, v]) => ({
       method,
