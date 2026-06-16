@@ -35,6 +35,47 @@ import {
 } from "@/components/ui/table";
 import { formatBRL, formatPct } from "@/lib/money";
 
+import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+
+const accentClass: Record<string, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  muted: "text-muted-foreground",
+  info: "text-info",
+  danger: "text-destructive",
+};
+
+function MetricCard({
+  label,
+  icon: Icon,
+  accent = "info",
+  display,
+}: {
+  label: string;
+  icon: LucideIcon;
+  accent?: "success" | "warning" | "muted" | "info" | "danger";
+  display: string;
+}) {
+  return (
+    <Card className="glass-card overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">{label}</p>
+            <p className={cn("mt-1 text-2xl font-bold tracking-tight numeric", accentClass[accent])}>
+              {display}
+            </p>
+          </div>
+          <div className={cn("rounded-lg bg-secondary p-2", accentClass[accent])}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const toCents = (v: string): number => Math.round(Number(v.replace(",", ".")) * 100);
 
 function NewSnapshotDialog({ companyId, onSaved }: { companyId: string; onSaved: () => void }) {
