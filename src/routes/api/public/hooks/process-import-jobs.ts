@@ -134,18 +134,23 @@ async function processJob(job: {
       }
       const slice = rows.slice(processed, processed + CHUNK_SIZE);
 
-      // 2. dedupe against existing DB rows
+      // 2. dedupe against existing DB rows — sub-chunk IN() to keep URL under PostgREST limits
       const fps = [
         ...new Set(slice.flatMap((u) => (u.occurrence === 1 ? [u.fp, u.legacyFp] : [u.fp]))),
       ];
-      const { data: existing, error: exErr } = await admin
-        .from("transactions")
-        .select("fingerprint")
-        .eq("company_id", job.company_id)
-        .is("deleted_at", null)
-        .in("fingerprint", fps);
-      if (exErr) throw new Error(exErr.message);
-      const existingSet = new Set((existing ?? []).map((e) => e.fingerprint as string));
+      const existingSet = new Set<string>();
+      const FP_LOOKUP_CHUNK = 80;
+      for (let i = 0; i < fps.length; i += FP_LOOKUP_CHUNK) {
+        const fpSlice = fps.slice(i, i + FP_LOOKUP_CHUNK);
+        const { data: existing, error: exErr } = await admin
+          .from("transactions")
+          .select("fingerprint")
+          .eq("company_id", job.company_id)
+          .is("deleted_at", null)
+          .in("fingerprint", fpSlice);
+        if (exErr) throw new Error(exErr.message);
+        for (const e of existing ?? []) if (e.fingerprint) existingSet.add(e.fingerprint as string);
+      }
       const toInsert = slice.filter((u) => {
         const alreadyImported =
           existingSet.has(u.fp) || (u.occurrence === 1 && existingSet.has(u.legacyFp));
