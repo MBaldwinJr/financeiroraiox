@@ -72,33 +72,35 @@ export function DrePage() {
           <CardTitle className="text-sm font-medium">Demonstrativo do Resultado do Exercício</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full text-xs numeric">
-            <thead>
-              <tr className="border-b border-border bg-secondary/40">
-                <th className="sticky left-0 z-10 w-72 bg-secondary/40 px-3 py-2 text-left font-medium">Conta</th>
-                {MONTH_LABELS.map((m) => (
-                  <th key={m} className="px-2 py-2 text-right font-medium text-muted-foreground">{m}</th>
+          <TooltipProvider delayDuration={150}>
+            <table className="w-full text-xs numeric">
+              <thead>
+                <tr className="border-b border-border bg-secondary/40">
+                  <th className="sticky left-0 z-10 w-72 bg-secondary/40 px-3 py-2 text-left font-medium">Conta</th>
+                  {MONTH_LABELS.map((m) => (
+                    <th key={m} className="px-2 py-2 text-right font-medium text-muted-foreground">{m}</th>
+                  ))}
+                  <th className="px-3 py-2 text-right font-semibold">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LINES.map((line) => (
+                  <DreRow key={line.key} def={line} row={matrix[line.key]} />
                 ))}
-                <th className="px-3 py-2 text-right font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {LINES.map((line) => (
-                <DreRow key={line.key} def={line} row={matrix[line.key]} />
-              ))}
-              <tr className="border-t border-border">
-                <td className="sticky left-0 z-10 bg-card px-3 py-2 font-semibold">Margem Líquida %</td>
-                {margin.map((m, i) => (
-                  <td key={i} className={cn("px-2 py-2 text-right", m >= 0 ? "text-success" : "text-destructive")}>
-                    {formatPct(m)}
+                <tr className="border-t border-border">
+                  <td className="sticky left-0 z-10 bg-card px-3 py-2 font-semibold">Margem Líquida %</td>
+                  {margin.map((m, i) => (
+                    <td key={i} className={cn("px-2 py-2 text-right", m >= 0 ? "text-success" : "text-destructive")}>
+                      {formatPct(m)}
+                    </td>
+                  ))}
+                  <td className={cn("px-3 py-2 text-right font-semibold", marginTotal >= 0 ? "text-success" : "text-destructive")}>
+                    {formatPct(marginTotal)}
                   </td>
-                ))}
-                <td className={cn("px-3 py-2 text-right font-semibold", marginTotal >= 0 ? "text-success" : "text-destructive")}>
-                  {formatPct(marginTotal)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </tr>
+              </tbody>
+            </table>
+          </TooltipProvider>
         </CardContent>
       </Card>
     </div>
@@ -116,7 +118,20 @@ function DreRow({ def, row }: { def: LineDef; row: DreMatrix[DreLine] }) {
   };
   return (
     <tr className={cn("border-b border-border/60", isSubtotal && "bg-secondary/30 font-semibold")}>
-      <td className={cn("sticky left-0 z-10 bg-card px-3 py-2 text-left", def.indent && "pl-8")}>{def.label}</td>
+      <td className={cn("sticky left-0 z-10 bg-card px-3 py-2 text-left", def.indent && "pl-8")}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-help items-center gap-1.5 border-b border-dotted border-muted-foreground/40">
+              {def.label}
+              <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+            {def.hint}
+          </TooltipContent>
+        </Tooltip>
+      </td>
+
       {row.monthly.map((v, i) => (
         <td key={i} className={cn("px-2 py-2 text-right", cellClass(v))}>
           {v === 0 ? "—" : formatBRL(v)}
