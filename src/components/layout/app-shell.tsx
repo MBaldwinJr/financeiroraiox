@@ -26,6 +26,7 @@ import {
   Scale,
   HandCoins,
   Package,
+  AlertTriangle,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
@@ -58,6 +59,7 @@ import { useState } from "react";
 const NAV_MAIN = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/dre", label: "DRE", icon: FileBarChart },
+  { to: "/dre-auditoria", label: "Auditoria DRE", icon: AlertTriangle },
   { to: "/fluxo-caixa", label: "Fluxo de Caixa", icon: Waves },
   { to: "/receitas", label: "Receitas", icon: TrendingUp },
   { to: "/despesas", label: "Despesas", icon: TrendingDown },
