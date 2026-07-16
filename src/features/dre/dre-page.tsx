@@ -1,128 +1,97 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
-import { getFinancials } from "@/features/dashboard/dashboard.functions";
+import { getDreMatrix } from "@/features/dre/dre-engine/dre-engine.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import type { DreGroupKey } from "@/features/dre/dre-group.functions";
+import type { DreLine, DreMatrix } from "./dre-engine/dre-engine.types";
+
+interface LineDef {
+  key: DreLine;
+  label: string;
+  kind: "positive" | "negative" | "subtotal" | "financial";
+  indent?: boolean;
+}
+
+const LINES: LineDef[] = [
+  { key: "receita_bruta", label: "(+) Receita Bruta", kind: "positive" },
+  { key: "deducoes", label: "(-) Deduções (Devoluções / Descontos / Impostos s/ Venda)", kind: "negative", indent: true },
+  { key: "receita_liquida", label: "(=) Receita Líquida", kind: "subtotal" },
+  { key: "cmv", label: "(-) CMV", kind: "negative", indent: true },
+  { key: "lucro_bruto", label: "(=) Lucro Bruto", kind: "subtotal" },
+  { key: "despesa_comercial", label: "(-) Despesas Comerciais", kind: "negative", indent: true },
+  { key: "despesa_administrativa", label: "(-) Despesas Administrativas", kind: "negative", indent: true },
+  { key: "despesa_operacional", label: "(-) Outras Despesas Operacionais", kind: "negative", indent: true },
+  { key: "ebitda", label: "(=) EBITDA", kind: "subtotal" },
+  { key: "depreciacao", label: "(-) Depreciação & Amortização", kind: "negative", indent: true },
+  { key: "ebit", label: "(=) EBIT", kind: "subtotal" },
+  { key: "resultado_financeiro", label: "(±) Resultado Financeiro", kind: "financial", indent: true },
+  { key: "lair", label: "(=) LAIR — Lucro Antes IR/CSLL", kind: "subtotal" },
+  { key: "ir_csll", label: "(-) IRPJ + CSLL", kind: "negative", indent: true },
+  { key: "lucro_liquido", label: "(=) Lucro Líquido", kind: "subtotal" },
+];
 
 export function DrePage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
-  const basis = useFilterStore((s) => s.revenueBasis);
-  const fetcher = useServerFn(getFinancials);
+  const fetcher = useServerFn(getDreMatrix);
   const query = useQuery({
-    queryKey: ["financials", companyId, range.year, range.month, basis],
-    queryFn: () =>
-      fetcher({ data: { companyId: companyId!, year: range.year, month: null, basis } }),
+    queryKey: ["dre-matrix", companyId, range.year],
+    queryFn: () => fetcher({ data: { companyId: companyId!, year: range.year } }),
     enabled: !!companyId,
   });
 
-  if (!companyId)
-    return (
-      <p className="text-sm text-muted-foreground">Selecione uma empresa para ver o DRE.</p>
-    );
+  if (!companyId) return <p className="text-sm text-muted-foreground">Selecione uma empresa.</p>;
   if (!query.data) return <p className="text-sm text-muted-foreground">Carregando DRE…</p>;
+  const matrix = query.data as DreMatrix;
 
-  const { monthly } = query.data;
-  const cols = 12;
-
-  const sumRow = (key: keyof (typeof monthly)[number]) => monthly.map((m) => m[key]);
-  const totalOf = (vals: number[]) => vals.reduce((a, b) => a + b, 0);
-
-  const revenue = sumRow("revenue");
-  const cmv = sumRow("cmv");
-  const supplier = sumRow("supplier");
-  const freight = sumRow("freight");
-  const fixed = sumRow("fixed");
-  const variable = sumRow("variable");
-  const operational = sumRow("operational");
-  const other = sumRow("other");
-
-  const grossProfit = revenue.map((r, i) => r - cmv[i]);
-  // Total Despesas exclui CMV — o CMV já foi deduzido no Lucro Bruto.
-  const totalExpense = supplier.map(
-    (_, i) => supplier[i] + freight[i] + fixed[i] + variable[i] + operational[i] + other[i],
-  );
-  const operatingResult = grossProfit.map(
-    (gp, i) => gp - supplier[i] - freight[i] - fixed[i] - variable[i] - operational[i],
-  );
-  const netProfit = grossProfit.map((gp, i) => gp - totalExpense[i]);
-  const margin = revenue.map((r, i) => (r > 0 ? netProfit[i] / r : 0));
+  const revenue = matrix.receita_bruta;
+  const net = matrix.lucro_liquido;
+  const margin = revenue.monthly.map((r, i) => (r > 0 ? net.monthly[i] / r : 0));
+  const marginTotal = revenue.total > 0 ? net.total / revenue.total : 0;
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">DRE Dinâmico — {range.year}</h1>
-          <p className="text-sm text-muted-foreground">
-            Demonstrativo do Resultado do Exercício mensal com totais anuais calculados automaticamente.
-          </p>
-        </div>
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">DRE Contábil — {range.year}</h1>
+        <p className="text-sm text-muted-foreground">
+          Padrão CPC/IFRS · Regime de Competência · Contas patrimoniais (Fornecedores, Empréstimos, Imobilizado) não são abatidas.
+        </p>
       </header>
       <FilterBar />
 
       <Card className="glass-card">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Mês a mês</CardTitle>
+          <CardTitle className="text-sm font-medium">Demonstrativo do Resultado do Exercício</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-xs numeric">
             <thead>
               <tr className="border-b border-border bg-secondary/40">
-                <th className="sticky left-0 z-10 w-56 bg-secondary/40 px-3 py-2 text-left font-medium">
-                  Conta
-                </th>
-                {Array.from({ length: cols }).map((_, i) => (
-                  <th key={i} className="px-2 py-2 text-right font-medium text-muted-foreground">
-                    {MONTH_LABELS[i]}
-                  </th>
+                <th className="sticky left-0 z-10 w-72 bg-secondary/40 px-3 py-2 text-left font-medium">Conta</th>
+                {MONTH_LABELS.map((m) => (
+                  <th key={m} className="px-2 py-2 text-right font-medium text-muted-foreground">{m}</th>
                 ))}
                 <th className="px-3 py-2 text-right font-semibold">Total</th>
               </tr>
             </thead>
             <tbody>
-              <DreSection
-                title="(+) Receita Bruta"
-                values={revenue}
-                bold
-                positive
-                group="revenue"
-              />
-              <DreSection title="(-) CMV" values={cmv} negative group="cmv" />
-              <DreSection title="(=) Lucro Bruto" values={grossProfit} bold highlight />
-              <DreSection title="(-) Fornecedores" values={supplier} negative group="supplier" />
-              <DreSection title="(-) Fretes" values={freight} negative group="freight" />
-              <DreSection title="(-) Despesas Fixas" values={fixed} negative group="fixed" />
-              <DreSection title="(-) Despesas Variáveis" values={variable} negative group="variable" />
-              <DreSection title="(-) Operacional" values={operational} negative group="operational" />
-              <DreSection title="(=) Resultado Operacional" values={operatingResult} bold highlight />
-              <DreSection title="(-) Outras Despesas" values={other} negative group="other" />
-              <DreSection title="(=) Total Despesas" values={totalExpense} bold negative />
-              <DreSection title="(=) Lucro Líquido" values={netProfit} bold highlight />
+              {LINES.map((line) => (
+                <DreRow key={line.key} def={line} row={matrix[line.key]} />
+              ))}
               <tr className="border-t border-border">
-                <td className="sticky left-0 z-10 bg-card px-3 py-2 font-semibold">Margem %</td>
+                <td className="sticky left-0 z-10 bg-card px-3 py-2 font-semibold">Margem Líquida %</td>
                 {margin.map((m, i) => (
-                  <td
-                    key={i}
-                    className={cn(
-                      "px-2 py-2 text-right",
-                      m >= 0 ? "text-success" : "text-destructive",
-                    )}
-                  >
+                  <td key={i} className={cn("px-2 py-2 text-right", m >= 0 ? "text-success" : "text-destructive")}>
                     {formatPct(m)}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-right font-semibold">
-                  {formatPct(
-                    totalOf(revenue) > 0 ? totalOf(netProfit) / totalOf(revenue) : 0,
-                  )}
+                <td className={cn("px-3 py-2 text-right font-semibold", marginTotal >= 0 ? "text-success" : "text-destructive")}>
+                  {formatPct(marginTotal)}
                 </td>
               </tr>
             </tbody>
@@ -133,68 +102,25 @@ export function DrePage() {
   );
 }
 
-function DreSection({
-  title,
-  values,
-  bold,
-  highlight,
-  positive,
-  negative,
-  group,
-}: {
-  title: string;
-  values: number[];
-  bold?: boolean;
-  highlight?: boolean;
-  positive?: boolean;
-  negative?: boolean;
-  group?: DreGroupKey;
-}) {
-  const total = values.reduce((a, b) => a + b, 0);
+function DreRow({ def, row }: { def: LineDef; row: DreMatrix[DreLine] }) {
+  const isSubtotal = def.kind === "subtotal";
+  const cellClass = (v: number) => {
+    if (v === 0) return "text-muted-foreground";
+    if (def.kind === "positive" || (isSubtotal && v > 0)) return "text-success";
+    if (def.kind === "negative" || (isSubtotal && v < 0)) return "text-destructive";
+    if (def.kind === "financial") return v >= 0 ? "text-destructive" : "text-success";
+    return "";
+  };
   return (
-    <tr
-      className={cn(
-        "border-b border-border/60",
-        highlight && "bg-secondary/30",
-        bold && "font-semibold",
-      )}
-    >
-      <td className="sticky left-0 z-10 bg-card px-3 py-2 text-left">
-        {group ? (
-          <Link
-            to="/dre/$group"
-            params={{ group }}
-            className="group inline-flex items-center gap-1 hover:text-primary hover:underline"
-          >
-            {title}
-            <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-          </Link>
-        ) : (
-          title
-        )}
-      </td>
-      {values.map((v, i) => (
-        <td
-          key={i}
-          className={cn(
-            "px-2 py-2 text-right",
-            v === 0 && "text-muted-foreground",
-            v !== 0 && positive && "text-success",
-            v !== 0 && negative && "text-destructive",
-          )}
-        >
+    <tr className={cn("border-b border-border/60", isSubtotal && "bg-secondary/30 font-semibold")}>
+      <td className={cn("sticky left-0 z-10 bg-card px-3 py-2 text-left", def.indent && "pl-8")}>{def.label}</td>
+      {row.monthly.map((v, i) => (
+        <td key={i} className={cn("px-2 py-2 text-right", cellClass(v))}>
           {v === 0 ? "—" : formatBRL(v)}
         </td>
       ))}
-      <td
-        className={cn(
-          "px-3 py-2 text-right",
-          total === 0 && "text-muted-foreground",
-          total !== 0 && positive && "text-success",
-          total !== 0 && negative && "text-destructive",
-        )}
-      >
-        {total === 0 ? "—" : formatBRL(total)}
+      <td className={cn("px-3 py-2 text-right", cellClass(row.total), isSubtotal && "font-semibold")}>
+        {row.total === 0 ? "—" : formatBRL(row.total)}
       </td>
     </tr>
   );
