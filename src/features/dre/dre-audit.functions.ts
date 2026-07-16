@@ -115,3 +115,61 @@ export const getDreAudit = createServerFn({ method: "POST" })
       issues: issues.slice(0, 500),
     };
   });
+
+const FillCompetenciaInput = z.object({
+  companyId: z.string().uuid(),
+  transactionIds: z.array(z.string().uuid()).min(1).max(1000),
+});
+
+export const fillMissingCompetencia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => FillCompetenciaInput.parse(i))
+  .handler(async ({ context, data }) => {
+    const { data: rows, error: fetchErr } = await context.supabase
+      .from("transactions")
+      .select("id, date")
+      .eq("company_id", data.companyId)
+      .in("id", data.transactionIds)
+      .is("competencia", null);
+    if (fetchErr) throw new Error(fetchErr.message);
+
+    let updated = 0;
+    for (const row of rows ?? []) {
+      const { error } = await context.supabase
+        .from("transactions")
+        .update({ competencia: row.date })
+        .eq("id", row.id)
+        .eq("company_id", data.companyId);
+      if (error) throw new Error(error.message);
+      updated += 1;
+    }
+    return { updated };
+  });
+
+const ReassignCategoryInput = z.object({
+  companyId: z.string().uuid(),
+  transactionIds: z.array(z.string().uuid()).min(1).max(1000),
+  categoryId: z.string().uuid(),
+});
+
+export const reassignCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => ReassignCategoryInput.parse(i))
+  .handler(async ({ context, data }) => {
+    const { data: cat, error: catErr } = await context.supabase
+      .from("categories")
+      .select("id, kind")
+      .eq("company_id", data.companyId)
+      .eq("id", data.categoryId)
+      .maybeSingle();
+    if (catErr) throw new Error(catErr.message);
+    if (!cat) throw new Error("Categoria não encontrada");
+
+    const { error } = await context.supabase
+      .from("transactions")
+      .update({ category_id: data.categoryId, kind: cat.kind })
+      .eq("company_id", data.companyId)
+      .in("id", data.transactionIds);
+    if (error) throw new Error(error.message);
+    return { updated: data.transactionIds.length };
+  });
