@@ -1,12 +1,22 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,7 +26,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatBRL } from "@/lib/money";
-import { getDreAudit, type DreAuditIssue } from "./dre-audit.functions";
+import { listCategories } from "@/features/catalog/catalog.functions";
+import {
+  fillMissingCompetencia,
+  getDreAudit,
+  reassignCategory,
+  type DreAuditIssue,
+} from "./dre-audit.functions";
 
 const REASON_LABELS: Record<DreAuditIssue["reason"], string> = {
   sem_categoria: "Sem categoria",
@@ -39,6 +55,13 @@ export function DreAuditPage() {
   const range = useFilterStore((s) => s.range);
   const year = useMemo(() => range.year, [range.year]);
   const fetchAudit = useServerFn(getDreAudit);
+  const fetchCategories = useServerFn(listCategories);
+  const fillCompetencia = useServerFn(fillMissingCompetencia);
+  const reassign = useServerFn(reassignCategory);
+  const queryClient = useQueryClient();
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [targetCategory, setTargetCategory] = useState<string>("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["dre-audit", companyId, year],
@@ -46,12 +69,77 @@ export function DreAuditPage() {
     queryFn: () => fetchAudit({ data: { companyId: companyId!, year } }),
   });
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories", companyId],
+    enabled: Boolean(companyId),
+    queryFn: () => fetchCategories({ data: { companyId: companyId! } }),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["dre-audit", companyId, year] });
+    setSelected(new Set());
+  };
+
+  const fillMut = useMutation({
+    mutationFn: (ids: string[]) =>
+      fillCompetencia({ data: { companyId: companyId!, transactionIds: ids } }),
+    onSuccess: (r) => {
+      toast.success(`Competência preenchida em ${r.updated} lançamento(s).`);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reassignMut = useMutation({
+    mutationFn: (payload: { ids: string[]; categoryId: string }) =>
+      reassign({
+        data: {
+          companyId: companyId!,
+          transactionIds: payload.ids,
+          categoryId: payload.categoryId,
+        },
+      }),
+    onSuccess: (r) => {
+      toast.success(`Categoria atribuída a ${r.updated} lançamento(s).`);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectableIds = useMemo(
+    () => Array.from(new Set((data?.issues ?? []).map((i) => i.id))),
+    [data?.issues],
+  );
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(selectableIds));
+  };
+
+  const selectedIds = Array.from(selected);
+  const selectedMissingCompetencia = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of data?.issues ?? []) {
+      if (selected.has(i.id) && i.reason === "sem_competencia") s.add(i.id);
+    }
+    return Array.from(s);
+  }, [data?.issues, selected]);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Auditoria da DRE</h1>
         <p className="text-sm text-muted-foreground">
-          Detecta lançamentos que podem distorcer a DRE — sem categoria, sem competência ou contas patrimoniais indevidas.
+          Detecta lançamentos que podem distorcer a DRE — sem categoria, sem competência ou contas
+          patrimoniais indevidas.
         </p>
       </div>
 
@@ -62,7 +150,9 @@ export function DreAuditPage() {
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Lançamentos analisados</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  Lançamentos analisados
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-semibold">{data.totalTransactions}</CardContent>
             </Card>
@@ -100,8 +190,46 @@ export function DreAuditPage() {
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <CardTitle>Lançamentos com inconsistência (top 500)</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {selectedIds.length} selecionado(s)
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    selectedMissingCompetencia.length === 0 || fillMut.isPending
+                  }
+                  onClick={() => fillMut.mutate(selectedMissingCompetencia)}
+                >
+                  Preencher competência = data ({selectedMissingCompetencia.length})
+                </Button>
+                <Select value={targetCategory} onValueChange={setTargetCategory}>
+                  <SelectTrigger className="h-9 w-[220px]">
+                    <SelectValue placeholder="Reatribuir categoria…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} · {c.kind === "revenue" ? "Receita" : "Despesa"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  disabled={
+                    !targetCategory || selectedIds.length === 0 || reassignMut.isPending
+                  }
+                  onClick={() =>
+                    reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory })
+                  }
+                >
+                  Aplicar categoria
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {data.issues.length === 0 ? (
@@ -112,6 +240,13 @@ export function DreAuditPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={toggleAll}
+                          aria-label="Selecionar todos"
+                        />
+                      </TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Competência</TableHead>
                       <TableHead>Descrição</TableHead>
@@ -123,6 +258,13 @@ export function DreAuditPage() {
                   <TableBody>
                     {data.issues.map((issue) => (
                       <TableRow key={`${issue.id}-${issue.reason}`}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selected.has(issue.id)}
+                            onCheckedChange={() => toggle(issue.id)}
+                            aria-label="Selecionar linha"
+                          />
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-xs">{issue.date}</TableCell>
                         <TableCell className="whitespace-nowrap text-xs">
                           {issue.competencia ?? "—"}
@@ -137,7 +279,9 @@ export function DreAuditPage() {
                         <TableCell>
                           <Badge
                             variant={
-                              REASON_TONE[issue.reason] === "critical" ? "destructive" : "secondary"
+                              REASON_TONE[issue.reason] === "critical"
+                                ? "destructive"
+                                : "secondary"
                             }
                           >
                             {REASON_LABELS[issue.reason]}
