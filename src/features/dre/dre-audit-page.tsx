@@ -37,7 +37,7 @@ const REASON_TONE: Record<DreAuditIssue["reason"], "critical" | "warning" | "inf
 export function DreAuditPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
-  const year = useMemo(() => new Date(range.start).getFullYear(), [range.start]);
+  const year = useMemo(() => range.year, [range.year]);
   const fetchAudit = useServerFn(getDreAudit);
 
   const { data, isLoading } = useQuery({
