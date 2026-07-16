@@ -304,15 +304,23 @@ export function DreAuditPage() {
                           {formatBRL(issue.amount_cents)}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              REASON_TONE[issue.reason] === "critical"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {REASON_LABELS[issue.reason]}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant={
+                                  REASON_TONE[issue.reason] === "critical"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                                className="cursor-help"
+                              >
+                                {REASON_LABELS[issue.reason]}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                              {REASON_HINTS[issue.reason]}
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
