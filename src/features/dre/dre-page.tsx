@@ -1,9 +1,11 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { getDreMatrix } from "@/features/dre/dre-engine/dre-engine.functions";
+import { STORED_DRE_LINES, type StoredDreLine } from "@/features/dre/dre-line.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,6 +13,8 @@ import { Info } from "lucide-react";
 import { formatBRL, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { DreLine, DreMatrix } from "./dre-engine/dre-engine.types";
+
+const STORED_SET = new Set<DreLine>(STORED_DRE_LINES);
 
 interface LineDef {
   key: DreLine;
