@@ -125,10 +125,21 @@ function DreRow({ def, row }: { def: LineDef; row: DreMatrix[DreLine] }) {
       <td className={cn("sticky left-0 z-10 bg-card px-3 py-2 text-left", def.indent && "pl-8")}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="inline-flex cursor-help items-center gap-1.5 border-b border-dotted border-muted-foreground/40">
-              {def.label}
-              <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
-            </span>
+            {STORED_SET.has(def.key) ? (
+              <Link
+                to="/dre_/linha/$line"
+                params={{ line: def.key as StoredDreLine }}
+                className="inline-flex items-center gap-1.5 border-b border-dotted border-muted-foreground/40 hover:text-primary hover:border-primary"
+              >
+                {def.label}
+                <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
+              </Link>
+            ) : (
+              <span className="inline-flex cursor-help items-center gap-1.5 border-b border-dotted border-muted-foreground/40">
+                {def.label}
+                <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
+              </span>
+            )}
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
             {def.hint}
