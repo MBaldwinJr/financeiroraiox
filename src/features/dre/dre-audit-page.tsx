@@ -25,6 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatBRL } from "@/lib/money";
 import { listCategories } from "@/features/catalog/catalog.functions";
 import {
@@ -48,6 +54,19 @@ const REASON_TONE: Record<DreAuditIssue["reason"], "critical" | "warning" | "inf
   categoria_sem_account_class: "warning",
   sem_competencia: "warning",
   conta_patrimonial_em_dre: "info",
+};
+
+const REASON_HINTS: Record<DreAuditIssue["reason"], string> = {
+  sem_categoria:
+    "Lançamento sem categoria vinculada. Não entra em nenhuma linha da DRE — atribua uma categoria para que seja contabilizado corretamente.",
+  categoria_sem_dre_line:
+    "A categoria existe, mas não está mapeada a uma linha da DRE (Receita Bruta, CMV, Despesas Fixas, etc.). Sem esse mapeamento, o valor fica de fora do resultado. Ajuste em Mapeamentos ERP ou no cadastro da categoria.",
+  categoria_sem_account_class:
+    "A categoria não tem uma classe contábil CPC (receita, custo, despesa operacional, financeira…). Impede o agrupamento correto na DRE e em relatórios gerenciais.",
+  sem_competencia:
+    "Falta a data de competência (mês/ano em que a receita/despesa foi gerada). A DRE segue regime de competência; sem essa data o lançamento pode cair no mês errado. Use 'Preencher competência = data' para adotar a data do lançamento.",
+  conta_patrimonial_em_dre:
+    "Categoria classificada como conta patrimonial (Balanço) — Fornecedores, Empréstimos (principal), Compra de Imobilizado. São liquidações/movimentações de Ativo ou Passivo e NÃO devem impactar o resultado. Já são excluídas automaticamente da DRE e aparecem apenas no Fluxo de Caixa. Este item é informativo.",
 };
 
 export function DreAuditPage() {
@@ -134,6 +153,7 @@ export function DreAuditPage() {
   }, [data?.issues, selected]);
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Auditoria da DRE</h1>
@@ -178,12 +198,19 @@ export function DreAuditPage() {
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 {(Object.keys(data.byReason) as DreAuditIssue["reason"][]).map((reason) => (
-                  <Badge
-                    key={reason}
-                    variant={REASON_TONE[reason] === "critical" ? "destructive" : "secondary"}
-                  >
-                    {REASON_LABELS[reason]}: {data.byReason[reason]}
-                  </Badge>
+                  <Tooltip key={reason}>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant={REASON_TONE[reason] === "critical" ? "destructive" : "secondary"}
+                        className="cursor-help"
+                      >
+                        {REASON_LABELS[reason]}: {data.byReason[reason]}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                      {REASON_HINTS[reason]}
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </CardContent>
             </Card>
@@ -277,15 +304,23 @@ export function DreAuditPage() {
                           {formatBRL(issue.amount_cents)}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              REASON_TONE[issue.reason] === "critical"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {REASON_LABELS[issue.reason]}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant={
+                                  REASON_TONE[issue.reason] === "critical"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                                className="cursor-help"
+                              >
+                                {REASON_LABELS[issue.reason]}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                              {REASON_HINTS[issue.reason]}
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -297,5 +332,6 @@ export function DreAuditPage() {
         </>
       )}
     </div>
+    </TooltipProvider>
   );
 }
