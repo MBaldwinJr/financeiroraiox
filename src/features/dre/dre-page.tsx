@@ -127,7 +127,7 @@ function DreRow({ def, row }: { def: LineDef; row: DreMatrix[DreLine] }) {
           <TooltipTrigger asChild>
             {STORED_SET.has(def.key) ? (
               <Link
-                to="/dre_/linha/$line"
+                to="/dre/linha/$line"
                 params={{ line: def.key as StoredDreLine }}
                 className="inline-flex items-center gap-1.5 border-b border-dotted border-muted-foreground/40 hover:text-primary hover:border-primary"
               >
