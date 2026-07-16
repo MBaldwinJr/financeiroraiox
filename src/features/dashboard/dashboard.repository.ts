@@ -24,12 +24,14 @@ export function fetchYearTransactions(
   supabase: SupabaseClient,
   { companyId, start, end }: DateWindow,
 ): Promise<TransactionRow[]> {
+  // Exclui contas patrimoniais (Fornecedores, Empréstimos, Imobilizado) da DRE.
   return fetchAllRows<TransactionRow>((from, to) =>
     supabase
       .from("transactions")
-      .select("date, amount_cents, kind, payment_method, category:categories(dre_group)")
+      .select("date, amount_cents, kind, payment_method, category:categories!inner(dre_group, is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
+      .eq("categories.is_balance_sheet", false)
       .gte("date", start)
       .lt("date", end)
       .range(from, to) as PaginatedQuery<TransactionRow>,
