@@ -56,6 +56,19 @@ const REASON_TONE: Record<DreAuditIssue["reason"], "critical" | "warning" | "inf
   conta_patrimonial_em_dre: "info",
 };
 
+const REASON_HINTS: Record<DreAuditIssue["reason"], string> = {
+  sem_categoria:
+    "Lançamento sem categoria vinculada. Não entra em nenhuma linha da DRE — atribua uma categoria para que seja contabilizado corretamente.",
+  categoria_sem_dre_line:
+    "A categoria existe, mas não está mapeada a uma linha da DRE (Receita Bruta, CMV, Despesas Fixas, etc.). Sem esse mapeamento, o valor fica de fora do resultado. Ajuste em Mapeamentos ERP ou no cadastro da categoria.",
+  categoria_sem_account_class:
+    "A categoria não tem uma classe contábil CPC (receita, custo, despesa operacional, financeira…). Impede o agrupamento correto na DRE e em relatórios gerenciais.",
+  sem_competencia:
+    "Falta a data de competência (mês/ano em que a receita/despesa foi gerada). A DRE segue regime de competência; sem essa data o lançamento pode cair no mês errado. Use 'Preencher competência = data' para adotar a data do lançamento.",
+  conta_patrimonial_em_dre:
+    "Categoria classificada como conta patrimonial (Balanço) — Fornecedores, Empréstimos (principal), Compra de Imobilizado. São liquidações/movimentações de Ativo ou Passivo e NÃO devem impactar o resultado. Já são excluídas automaticamente da DRE e aparecem apenas no Fluxo de Caixa. Este item é informativo.",
+};
+
 export function DreAuditPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
