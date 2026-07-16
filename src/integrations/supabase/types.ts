@@ -57,30 +57,45 @@ export type Database = {
       }
       categories: {
         Row: {
+          account_class: Database["public"]["Enums"]["account_class"] | null
+          codigo: string | null
           company_id: string
           created_at: string
           dre_group: Database["public"]["Enums"]["dre_group"]
+          dre_line: Database["public"]["Enums"]["dre_line"] | null
           id: string
+          is_balance_sheet: boolean
           kind: Database["public"]["Enums"]["category_kind"]
           name: string
+          ordem: number
           parent_id: string | null
         }
         Insert: {
+          account_class?: Database["public"]["Enums"]["account_class"] | null
+          codigo?: string | null
           company_id: string
           created_at?: string
           dre_group: Database["public"]["Enums"]["dre_group"]
+          dre_line?: Database["public"]["Enums"]["dre_line"] | null
           id?: string
+          is_balance_sheet?: boolean
           kind: Database["public"]["Enums"]["category_kind"]
           name: string
+          ordem?: number
           parent_id?: string | null
         }
         Update: {
+          account_class?: Database["public"]["Enums"]["account_class"] | null
+          codigo?: string | null
           company_id?: string
           created_at?: string
           dre_group?: Database["public"]["Enums"]["dre_group"]
+          dre_line?: Database["public"]["Enums"]["dre_line"] | null
           id?: string
+          is_balance_sheet?: boolean
           kind?: Database["public"]["Enums"]["category_kind"]
           name?: string
+          ordem?: number
           parent_id?: string | null
         }
         Relationships: [
@@ -528,6 +543,7 @@ export type Database = {
           bank_account_id: string | null
           category_id: string | null
           company_id: string
+          competencia: string
           cost_center_id: string | null
           created_at: string
           created_by: string | null
@@ -549,6 +565,7 @@ export type Database = {
           bank_account_id?: string | null
           category_id?: string | null
           company_id: string
+          competencia?: string
           cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -570,6 +587,7 @@ export type Database = {
           bank_account_id?: string | null
           category_id?: string | null
           company_id?: string
+          competencia?: string
           cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -652,6 +670,18 @@ export type Database = {
       }
     }
     Enums: {
+      account_class:
+        | "revenue"
+        | "deduction"
+        | "cogs"
+        | "selling_expense"
+        | "admin_expense"
+        | "other_operating_expense"
+        | "depreciation"
+        | "financial_result"
+        | "tax_on_profit"
+        | "non_operating"
+        | "balance_sheet"
       app_role: "owner" | "admin" | "member"
       category_kind: "revenue" | "expense"
       dre_group:
@@ -663,6 +693,23 @@ export type Database = {
         | "variable"
         | "operational"
         | "other"
+      dre_line:
+        | "receita_bruta"
+        | "deducoes"
+        | "receita_liquida"
+        | "cmv"
+        | "lucro_bruto"
+        | "despesa_comercial"
+        | "despesa_administrativa"
+        | "despesa_operacional"
+        | "ebitda"
+        | "depreciacao"
+        | "ebit"
+        | "resultado_financeiro"
+        | "lair"
+        | "ir_csll"
+        | "lucro_liquido"
+        | "nao_aplicavel"
       goal_kind: "revenue" | "profit" | "expense_cap"
       party_kind: "client" | "supplier" | "both"
       payment_method: "cash" | "pix" | "boleto" | "cheque" | "card"
@@ -795,6 +842,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_class: [
+        "revenue",
+        "deduction",
+        "cogs",
+        "selling_expense",
+        "admin_expense",
+        "other_operating_expense",
+        "depreciation",
+        "financial_result",
+        "tax_on_profit",
+        "non_operating",
+        "balance_sheet",
+      ],
       app_role: ["owner", "admin", "member"],
       category_kind: ["revenue", "expense"],
       dre_group: [
@@ -806,6 +866,24 @@ export const Constants = {
         "variable",
         "operational",
         "other",
+      ],
+      dre_line: [
+        "receita_bruta",
+        "deducoes",
+        "receita_liquida",
+        "cmv",
+        "lucro_bruto",
+        "despesa_comercial",
+        "despesa_administrativa",
+        "despesa_operacional",
+        "ebitda",
+        "depreciacao",
+        "ebit",
+        "resultado_financeiro",
+        "lair",
+        "ir_csll",
+        "lucro_liquido",
+        "nao_aplicavel",
       ],
       goal_kind: ["revenue", "profit", "expense_cap"],
       party_kind: ["client", "supplier", "both"],
