@@ -198,12 +198,19 @@ export function DreAuditPage() {
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 {(Object.keys(data.byReason) as DreAuditIssue["reason"][]).map((reason) => (
-                  <Badge
-                    key={reason}
-                    variant={REASON_TONE[reason] === "critical" ? "destructive" : "secondary"}
-                  >
-                    {REASON_LABELS[reason]}: {data.byReason[reason]}
-                  </Badge>
+                  <Tooltip key={reason}>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant={REASON_TONE[reason] === "critical" ? "destructive" : "secondary"}
+                        className="cursor-help"
+                      >
+                        {REASON_LABELS[reason]}: {data.byReason[reason]}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                      {REASON_HINTS[reason]}
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </CardContent>
             </Card>
