@@ -1,9 +1,11 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { getDreMatrix } from "@/features/dre/dre-engine/dre-engine.functions";
+import { STORED_DRE_LINES, type StoredDreLine } from "@/features/dre/dre-line.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,6 +13,8 @@ import { Info } from "lucide-react";
 import { formatBRL, formatPct, MONTH_LABELS } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { DreLine, DreMatrix } from "./dre-engine/dre-engine.types";
+
+const STORED_SET = new Set<DreLine>(STORED_DRE_LINES);
 
 interface LineDef {
   key: DreLine;
@@ -121,10 +125,21 @@ function DreRow({ def, row }: { def: LineDef; row: DreMatrix[DreLine] }) {
       <td className={cn("sticky left-0 z-10 bg-card px-3 py-2 text-left", def.indent && "pl-8")}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="inline-flex cursor-help items-center gap-1.5 border-b border-dotted border-muted-foreground/40">
-              {def.label}
-              <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
-            </span>
+            {STORED_SET.has(def.key) ? (
+              <Link
+                to="/dre_/linha/$line"
+                params={{ line: def.key as StoredDreLine }}
+                className="inline-flex items-center gap-1.5 border-b border-dotted border-muted-foreground/40 hover:text-primary hover:border-primary"
+              >
+                {def.label}
+                <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
+              </Link>
+            ) : (
+              <span className="inline-flex cursor-help items-center gap-1.5 border-b border-dotted border-muted-foreground/40">
+                {def.label}
+                <Info className="h-3 w-3 text-muted-foreground/70" aria-hidden />
+              </span>
+            )}
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
             {def.hint}

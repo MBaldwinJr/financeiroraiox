@@ -38,6 +38,7 @@ import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAnalisesRouteImport } from './routes/_authenticated/analises'
 import { Route as AuthenticatedDreGroupRouteImport } from './routes/_authenticated/dre_.$group'
 import { Route as ApiPublicHooksProcessImportJobsRouteImport } from './routes/api/public/hooks/process-import-jobs'
+import { Route as AuthenticatedDreLinhaLineRouteImport } from './routes/_authenticated/dre_.linha.$line'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -192,6 +193,12 @@ const ApiPublicHooksProcessImportJobsRoute =
     path: '/api/public/hooks/process-import-jobs',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedDreLinhaLineRoute =
+  AuthenticatedDreLinhaLineRouteImport.update({
+    id: '/dre_/linha/$line',
+    path: '/dre/linha/$line',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/dre/$group': typeof AuthenticatedDreGroupRoute
+  '/dre/linha/$line': typeof AuthenticatedDreLinhaLineRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesByTo {
@@ -251,6 +259,7 @@ export interface FileRoutesByTo {
   '/vendas': typeof AuthenticatedVendasRoute
   '/': typeof AuthenticatedIndexRoute
   '/dre/$group': typeof AuthenticatedDreGroupRoute
+  '/dre/linha/$line': typeof AuthenticatedDreLinhaLineRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRoutesById {
@@ -283,6 +292,7 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/dre_/$group': typeof AuthenticatedDreGroupRoute
+  '/_authenticated/dre_/linha/$line': typeof AuthenticatedDreLinhaLineRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
 }
 export interface FileRouteTypes {
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/vendas'
     | '/dre/$group'
+    | '/dre/linha/$line'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/'
     | '/dre/$group'
+    | '/dre/linha/$line'
     | '/api/public/hooks/process-import-jobs'
   id:
     | '__root__'
@@ -376,6 +388,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/_authenticated/'
     | '/_authenticated/dre_/$group'
+    | '/_authenticated/dre_/linha/$line'
     | '/api/public/hooks/process-import-jobs'
   fileRoutesById: FileRoutesById
 }
@@ -590,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessImportJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dre_/linha/$line': {
+      id: '/_authenticated/dre_/linha/$line'
+      path: '/dre/linha/$line'
+      fullPath: '/dre/linha/$line'
+      preLoaderRoute: typeof AuthenticatedDreLinhaLineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -620,6 +640,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedDreGroupRoute: typeof AuthenticatedDreGroupRoute
+  AuthenticatedDreLinhaLineRoute: typeof AuthenticatedDreLinhaLineRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -649,6 +670,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVendasRoute: AuthenticatedVendasRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedDreGroupRoute: AuthenticatedDreGroupRoute,
+  AuthenticatedDreLinhaLineRoute: AuthenticatedDreLinhaLineRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
