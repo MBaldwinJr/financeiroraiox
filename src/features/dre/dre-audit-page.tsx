@@ -332,5 +332,6 @@ export function DreAuditPage() {
         </>
       )}
     </div>
+    </TooltipProvider>
   );
 }
