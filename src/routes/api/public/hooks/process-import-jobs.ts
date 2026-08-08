@@ -165,6 +165,7 @@ async function processJob(job: {
         const payload = toInsert.map(({ r, fp }) => ({
           company_id: job.company_id,
           date: r.date,
+          competencia: r.date,
           description: r.description,
           amount_cents: r.amountCents,
           kind: r.kind,
