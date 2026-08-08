@@ -143,6 +143,7 @@ export const upsertTransaction = createServerFn({ method: "POST" })
     const payload = {
       company_id: data.companyId,
       date: data.date,
+      competencia: data.date,
       description: data.description,
       amount_cents: data.amountCents,
       kind: data.kind,
@@ -251,6 +252,7 @@ export const importTransactions = createServerFn({ method: "POST" })
     const payload = data.rows.map((r) => ({
       company_id: data.companyId,
       date: r.date,
+      competencia: r.date,
       description: r.description,
       amount_cents: r.amountCents,
       kind: r.kind,
