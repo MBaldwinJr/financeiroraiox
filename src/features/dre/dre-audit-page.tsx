@@ -37,6 +37,7 @@ import {
   fillMissingCompetencia,
   getDreAudit,
   reassignCategory,
+  deleteBulkTransactions,
   type DreAuditIssue,
 } from "./dre-audit.functions";
 
@@ -46,6 +47,7 @@ const REASON_LABELS: Record<DreAuditIssue["reason"], string> = {
   categoria_sem_account_class: "Categoria sem classe contábil",
   sem_competencia: "Sem competência",
   conta_patrimonial_em_dre: "Conta patrimonial (excluída da DRE)",
+  duplicidade_detectada: "Duplicidade detectada",
 };
 
 const REASON_TONE: Record<DreAuditIssue["reason"], "critical" | "warning" | "info"> = {
@@ -54,6 +56,7 @@ const REASON_TONE: Record<DreAuditIssue["reason"], "critical" | "warning" | "inf
   categoria_sem_account_class: "warning",
   sem_competencia: "warning",
   conta_patrimonial_em_dre: "info",
+  duplicidade_detectada: "critical",
 };
 
 const REASON_HINTS: Record<DreAuditIssue["reason"], string> = {
@@ -67,6 +70,8 @@ const REASON_HINTS: Record<DreAuditIssue["reason"], string> = {
     "Falta a data de competência (mês/ano em que a receita/despesa foi gerada). A DRE segue regime de competência; sem essa data o lançamento pode cair no mês errado. Use 'Preencher competência = data' para adotar a data do lançamento.",
   conta_patrimonial_em_dre:
     "Categoria classificada como conta patrimonial (Balanço) — Fornecedores, Empréstimos (principal), Compra de Imobilizado. São liquidações/movimentações de Ativo ou Passivo e NÃO devem impactar o resultado. Já são excluídas automaticamente da DRE e aparecem apenas no Fluxo de Caixa. Este item é informativo.",
+  duplicidade_detectada:
+    "Foram encontrados múltiplos lançamentos com a mesma impressão digital (data, valor, descrição e ERP). Isso pode indicar erro de importação ou processamento duplicado. Revise e utilize 'Excluir Selecionados' para manter apenas um registro.",
 };
 
 export function DreAuditPage() {
@@ -77,6 +82,7 @@ export function DreAuditPage() {
   const fetchCategories = useServerFn(listCategories);
   const fillCompetencia = useServerFn(fillMissingCompetencia);
   const reassign = useServerFn(reassignCategory);
+  const deleteBulk = useServerFn(deleteBulkTransactions);
   const queryClient = useQueryClient();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -120,6 +126,16 @@ export function DreAuditPage() {
       }),
     onSuccess: (r) => {
       toast.success(`Categoria atribuída a ${r.updated} lançamento(s).`);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (ids: string[]) =>
+      deleteBulk({ data: { companyId: companyId!, transactionIds: ids } }),
+    onSuccess: (r) => {
+      toast.success(`${r.updated} lançamento(s) excluído(s).`);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -255,6 +271,18 @@ export function DreAuditPage() {
                   }
                 >
                   Aplicar categoria
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={selectedIds.length === 0 || deleteMut.isPending}
+                  onClick={() => {
+                    if (confirm(`Deseja excluir definitivamente os ${selectedIds.length} lançamentos selecionados?`)) {
+                      deleteMut.mutate(selectedIds);
+                    }
+                  }}
+                >
+                  Excluir Selecionados
                 </Button>
               </div>
             </CardHeader>
