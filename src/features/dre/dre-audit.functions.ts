@@ -207,3 +207,28 @@ export const deleteBulkTransactions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { updated: data.transactionIds.length };
   });
+
+export const purgeImportedTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ companyId: z.string().uuid() }).parse(i))
+  .handler(async ({ context, data }) => {
+    // Delete transactions that have a fingerprint (indicating they were imported)
+    // and belong to the company, but NOT those without fingerprints (manual).
+    const { error, count } = await context.supabase
+      .from("transactions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("company_id", data.companyId)
+      .is("deleted_at", null)
+      .not("fingerprint", "is", null);
+
+    if (error) throw new Error(error.message);
+
+    // Also mark all import jobs for this company as 'failed' or similar if they were pending
+    await context.supabase
+      .from("import_jobs")
+      .update({ status: "failed", error: "Limpeza manual solicitada pelo usuário" })
+      .eq("company_id", data.companyId)
+      .in("status", ["pending", "processing"]);
+
+    return { deleted: count ?? 0 };
+  });
