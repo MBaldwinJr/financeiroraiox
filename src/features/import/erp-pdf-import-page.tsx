@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Upload, Save, Loader2, Trash2 } from "lucide-react";
+import { FileText, Upload, Save, Loader2, Trash2, Eraser } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,17 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { listCategories } from "@/features/catalog/catalog.functions";
 import {
@@ -29,6 +40,7 @@ import {
   listErpMappings,
   saveErpMappings,
 } from "@/features/import/erp-mappings.functions";
+import { purgeImportedTransactions } from "@/features/dre/dre-audit.functions";
 import { parseErpPdf, type ErpParsedRow } from "@/features/import/erp-pdf-parser";
 import { ImportDiagnostic } from "@/features/import/import-diagnostic";
 import { formatBRL } from "@/lib/money";
@@ -66,6 +78,7 @@ export function ErpPdfImportPage() {
   const enqueueFn = useServerFn(enqueueImportJob);
   const getJobFn = useServerFn(getImportJob);
   const saveMappingsFn = useServerFn(saveErpMappings);
+  const purgeImportedFn = useServerFn(purgeImportedTransactions);
 
   const jobQ = useQuery({
     queryKey: ["import-job", activeJobId],
@@ -137,6 +150,15 @@ export function ErpPdfImportPage() {
       qc.invalidateQueries({ queryKey: ["erp-mappings", companyId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar mapeamentos."),
+  });
+
+  const purgeMut = useMutation({
+    mutationFn: () => purgeImportedFn({ data: { companyId: companyId! } }),
+    onSuccess: (r) => {
+      toast.success("Todos os lançamentos importados foram removidos.");
+      qc.invalidateQueries();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao limpar lançamentos."),
   });
 
   const categoryById = useMemo(() => {
@@ -219,6 +241,31 @@ export function ErpPdfImportPage() {
             e importe em lote. Vamos criar uma lógica para que ao importar um novo PDF do ERP ter a opção de atualizar todos os lançamento e lançamento que não estão no novo relatorio do mês ser excluido
           </p>
         </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" className="text-destructive hover:bg-destructive/10">
+              <Eraser className="mr-2 h-4 w-4" /> Limpar Importações
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação removerá TODOS os lançamentos que foram importados via PDF/ERP até agora.
+                Os lançamentos manuais NÃO serão afetados. Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => purgeMut.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Sim, Limpar Tudo
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </header>
 
       <Card className="glass-card">
