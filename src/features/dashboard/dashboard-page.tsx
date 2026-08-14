@@ -188,7 +188,7 @@ export function DashboardPage() {
                 data={monthly.map((m, i) => ({
                   month: MONTH_LABELS[i],
                   Receita: fromCents(m.revenue),
-                  Despesa: fromCents(m.expense),
+                  Despesa: fromCents(m.expense - m.cmv),
                 }))}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.02 260 / 0.4)" />
