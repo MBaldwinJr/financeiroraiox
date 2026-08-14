@@ -15,6 +15,7 @@ interface TxRow {
   description: string | null;
   amount_cents: number;
   kind: "revenue" | "expense";
+  fingerprint: string | null;
   category: {
     id: string;
     name: string;
