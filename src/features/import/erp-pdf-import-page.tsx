@@ -216,7 +216,7 @@ export function ErpPdfImportPage() {
           <h1 className="text-2xl font-bold tracking-tight">Importar PDF do ERP</h1>
           <p className="text-sm text-muted-foreground">
             Suba o relatório "Plano de Contas com Valores" do seu ERP. Reveja, ajuste categorias
-            e importe em lote.
+            e importe em lote. Vamos criar uma lógica para que ao importar um novo PDF do ERP ter a opção de atualizar todos os lançamento e lançamento que não estão no novo relatorio do mês ser excluido
           </p>
         </div>
       </header>
