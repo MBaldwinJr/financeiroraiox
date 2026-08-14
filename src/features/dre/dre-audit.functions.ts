@@ -15,6 +15,7 @@ interface TxRow {
   description: string | null;
   amount_cents: number;
   kind: "revenue" | "expense";
+  fingerprint: string | null;
   category: {
     id: string;
     name: string;
@@ -37,7 +38,8 @@ export interface DreAuditIssue {
     | "categoria_sem_dre_line"
     | "categoria_sem_account_class"
     | "sem_competencia"
-    | "conta_patrimonial_em_dre";
+    | "conta_patrimonial_em_dre"
+    | "duplicidade_detectada";
 }
 
 export interface DreAuditSummary {
@@ -57,7 +59,7 @@ export const getDreAudit = createServerFn({ method: "POST" })
       context.supabase
         .from("transactions")
         .select(
-          "id, date, competencia, description, amount_cents, kind, category:categories(id, name, is_balance_sheet, dre_line, account_class)",
+          "id, date, competencia, description, amount_cents, kind, fingerprint, category:categories(id, name, is_balance_sheet, dre_line, account_class)",
         )
         .eq("company_id", data.companyId)
         .is("deleted_at", null)
@@ -67,6 +69,13 @@ export const getDreAudit = createServerFn({ method: "POST" })
     );
 
     const issues: DreAuditIssue[] = [];
+    const fpCount = new Map<string, number>();
+    for (const r of rows) {
+      if (r.fingerprint) {
+        fpCount.set(r.fingerprint, (fpCount.get(r.fingerprint) ?? 0) + 1);
+      }
+    }
+
     for (const r of rows) {
       const push = (reason: DreAuditIssue["reason"]) =>
         issues.push({
@@ -79,6 +88,10 @@ export const getDreAudit = createServerFn({ method: "POST" })
           categoryName: r.category?.name ?? null,
           reason,
         });
+
+      if (r.fingerprint && (fpCount.get(r.fingerprint) ?? 0) > 1) {
+        push("duplicidade_detectada");
+      }
 
       if (!r.category) {
         push("sem_categoria");
@@ -105,6 +118,7 @@ export const getDreAudit = createServerFn({ method: "POST" })
         categoria_sem_account_class: 0,
         sem_competencia: 0,
         conta_patrimonial_em_dre: 0,
+        duplicidade_detectada: 0,
       } as Record<DreAuditIssue["reason"], number>,
     );
 
@@ -168,6 +182,26 @@ export const reassignCategory = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("transactions")
       .update({ category_id: data.categoryId, kind: cat.kind })
+      .eq("company_id", data.companyId)
+      .in("id", data.transactionIds);
+    if (error) throw new Error(error.message);
+    return { updated: data.transactionIds.length };
+  });
+
+export const deleteBulkTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        companyId: z.string().uuid(),
+        transactionIds: z.array(z.string().uuid()).min(1).max(1000),
+      })
+      .parse(i),
+  )
+  .handler(async ({ context, data }) => {
+    const { error } = await context.supabase
+      .from("transactions")
+      .update({ deleted_at: new Date().toISOString() })
       .eq("company_id", data.companyId)
       .in("id", data.transactionIds);
     if (error) throw new Error(error.message);
