@@ -60,10 +60,26 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
   });
 
   const rows = useMemo(() => query.data?.rows ?? [], [query.data]);
-  const total = useMemo(() => rows.reduce((s, r) => s + r.amount_cents, 0), [rows]);
+
+  // CMV é apurado à parte (reduz a Receita no Lucro Bruto), por isso fica
+  // fora dos totais consolidados de despesas.
+  const isCmv = useCallback(
+    (row: (typeof rows)[number]) => kind === "expense" && row.categories?.dre_group === "cmv",
+    [kind],
+  );
+  const aggregatedRows = useMemo(() => rows.filter((r) => !isCmv(r)), [rows, isCmv]);
+  const cmvTotal = useMemo(
+    () => rows.reduce((s, r) => (isCmv(r) ? s + r.amount_cents : s), 0),
+    [rows, isCmv],
+  );
+
+  const total = useMemo(
+    () => aggregatedRows.reduce((s, r) => s + r.amount_cents, 0),
+    [aggregatedRows],
+  );
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
-    rows.forEach((r) => {
+    aggregatedRows.forEach((r) => {
       const name = r.categories?.name ?? "Sem categoria";
       m.set(name, (m.get(name) ?? 0) + r.amount_cents);
     });
@@ -71,7 +87,7 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 8);
-  }, [rows]);
+  }, [aggregatedRows]);
 
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
 
