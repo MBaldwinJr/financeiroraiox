@@ -59,8 +59,7 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
     enabled: !!companyId,
   });
 
-
-  const rows = query.data?.rows ?? [];
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data]);
   const total = useMemo(() => rows.reduce((s, r) => s + r.amount_cents, 0), [rows]);
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
@@ -74,8 +73,34 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       .slice(0, 8);
   }, [rows]);
 
+  const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
+
+  const duplicateIds = useMemo(() => {
+    const seen = new Set<string>();
+    const dups: string[] = [];
+    for (const r of rows) {
+      const key = `${r.date}|${r.amount_cents}|${r.kind}|${(r.description ?? "").trim().toLowerCase()}|${r.category_id ?? ""}`;
+      if (seen.has(key)) dups.push(r.id);
+      else seen.add(key);
+    }
+    return dups;
+  }, [rows]);
+
+  const toggleRow = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => (prev.length === rows.length ? [] : rows.map((r) => r.id)));
+  }, [rows]);
+
+  const clearSelection = useCallback(() => setSelectedIds([]), []);
+  const selectDuplicates = useCallback(() => setSelectedIds(duplicateIds), [duplicateIds]);
+
   const colorClass = kind === "revenue" ? "text-success" : "text-destructive";
   const Icon = kind === "revenue" ? TrendingUp : TrendingDown;
+
 
   return (
     <div className="space-y-6">
