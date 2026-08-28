@@ -45,13 +45,14 @@ function buildDre(monthly: Monthly): DreRow[] {
   const variable = sum("variable");
   const operational = sum("operational");
   const other = sum("other");
-  const totalExpense = monthly.map((m) => m.expense);
+  // Total de Despesas exclui o CMV, que já reduz a Receita no Lucro Bruto.
+  const totalExpense = monthly.map((m) => m.expense - m.cmv);
   const grossProfit = revenue.map((r, i) => r - cmv[i]);
   const operatingResult = revenue.map(
     (r, i) =>
       r - cmv[i] - supplier[i] - freight[i] - fixed[i] - variable[i] - operational[i],
   );
-  const netProfit = revenue.map((r, i) => r - totalExpense[i]);
+  const netProfit = grossProfit.map((g, i) => g - totalExpense[i]);
 
   const row = (label: string, values: number[], isTotal = false): DreRow => ({
     label,
