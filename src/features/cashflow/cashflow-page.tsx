@@ -28,15 +28,17 @@ export function CashflowPage() {
     return <p className="text-sm text-muted-foreground">Carregando fluxo de caixa…</p>;
 
   const { monthly } = data;
+  // CMV é apurado à parte (reduz a Receita no Lucro Bruto) e não compõe o total de despesas.
+  const outflow = (m: (typeof monthly)[number]) => m.expense - m.cmv;
   const series = monthly.reduce<
     { month: string; entradas: number; saidas: number; saldoMes: number; saldoAcum: number }[]
   >((acc, m, i) => {
     const prev = acc[i - 1]?.saldoAcum ?? 0;
-    const saldoMes = fromCents(m.revenue - m.expense);
+    const saldoMes = fromCents(m.revenue - outflow(m));
     acc.push({
       month: MONTH_LABELS[i],
       entradas: fromCents(m.revenue),
-      saidas: fromCents(m.expense),
+      saidas: fromCents(outflow(m)),
       saldoMes,
       saldoAcum: prev + saldoMes,
     });
@@ -44,7 +46,7 @@ export function CashflowPage() {
   }, []);
 
   const totalIn = monthly.reduce((a, m) => a + m.revenue, 0);
-  const totalOut = monthly.reduce((a, m) => a + m.expense, 0);
+  const totalOut = monthly.reduce((a, m) => a + outflow(m), 0);
   const saldo = totalIn - totalOut;
 
   return (
