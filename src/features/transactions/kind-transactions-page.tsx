@@ -60,10 +60,26 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
   });
 
   const rows = useMemo(() => query.data?.rows ?? [], [query.data]);
-  const total = useMemo(() => rows.reduce((s, r) => s + r.amount_cents, 0), [rows]);
+
+  // CMV é apurado à parte (reduz a Receita no Lucro Bruto), por isso fica
+  // fora dos totais consolidados de despesas.
+  const isCmv = useCallback(
+    (row: (typeof rows)[number]) => kind === "expense" && row.categories?.dre_group === "cmv",
+    [kind],
+  );
+  const aggregatedRows = useMemo(() => rows.filter((r) => !isCmv(r)), [rows, isCmv]);
+  const cmvTotal = useMemo(
+    () => rows.reduce((s, r) => (isCmv(r) ? s + r.amount_cents : s), 0),
+    [rows, isCmv],
+  );
+
+  const total = useMemo(
+    () => aggregatedRows.reduce((s, r) => s + r.amount_cents, 0),
+    [aggregatedRows],
+  );
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
-    rows.forEach((r) => {
+    aggregatedRows.forEach((r) => {
       const name = r.categories?.name ?? "Sem categoria";
       m.set(name, (m.get(name) ?? 0) + r.amount_cents);
     });
@@ -71,7 +87,7 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 8);
-  }, [rows]);
+  }, [aggregatedRows]);
 
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
 
@@ -113,7 +129,9 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="glass-card">
           <CardContent className="p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Total no período</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              {kind === "expense" ? "Total no período (exceto CMV)" : "Total no período"}
+            </p>
             <p className={cn("mt-2 text-2xl font-bold numeric", colorClass)}>
               <Icon className="mr-1 inline h-5 w-5" />
               {formatBRL(total)}
@@ -121,6 +139,11 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
             <p className="mt-1 text-xs text-muted-foreground">
               {range.month ? MONTH_LABELS[range.month - 1] : "Ano"} {range.year}
             </p>
+            {kind === "expense" && cmvTotal > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                CMV apurado à parte: {formatBRL(cmvTotal)}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="glass-card md:col-span-2">
