@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Search, TrendingDown, TrendingUp } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
@@ -8,10 +8,13 @@ import { useFilterStore } from "@/stores/filter-store";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatBRL, formatDate, MONTH_LABELS } from "@/lib/money";
 import { listAllTransactions } from "@/features/transactions/transactions.functions";
+import { BulkDeleteBar } from "@/features/transactions/components/bulk-delete-bar";
 import { cn } from "@/lib/utils";
+
 
 interface Props {
   kind: "revenue" | "expense";
@@ -56,8 +59,7 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
     enabled: !!companyId,
   });
 
-
-  const rows = query.data?.rows ?? [];
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data]);
   const total = useMemo(() => rows.reduce((s, r) => s + r.amount_cents, 0), [rows]);
   const byCategory = useMemo(() => {
     const m = new Map<string, number>();
@@ -71,8 +73,34 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       .slice(0, 8);
   }, [rows]);
 
+  const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
+
+  const duplicateIds = useMemo(() => {
+    const seen = new Set<string>();
+    const dups: string[] = [];
+    for (const r of rows) {
+      const key = `${r.date}|${r.amount_cents}|${r.kind}|${(r.description ?? "").trim().toLowerCase()}|${r.category_id ?? ""}`;
+      if (seen.has(key)) dups.push(r.id);
+      else seen.add(key);
+    }
+    return dups;
+  }, [rows]);
+
+  const toggleRow = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => (prev.length === rows.length ? [] : rows.map((r) => r.id)));
+  }, [rows]);
+
+  const clearSelection = useCallback(() => setSelectedIds([]), []);
+  const selectDuplicates = useCallback(() => setSelectedIds(duplicateIds), [duplicateIds]);
+
   const colorClass = kind === "revenue" ? "text-success" : "text-destructive";
   const Icon = kind === "revenue" ? TrendingUp : TrendingDown;
+
 
   return (
     <div className="space-y-6">
@@ -145,10 +173,43 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
               {rows.length} registros
             </Badge>
           </div>
+          {companyId && (
+            <BulkDeleteBar
+              filter={{
+                companyId,
+                year: range.year,
+                month: range.month,
+                kind,
+                search: search || undefined,
+                categoryIds: filters.categoryIds,
+                costCenterIds: filters.costCenterIds,
+                bankAccountIds: filters.bankAccountIds,
+                paymentMethods: filters.paymentMethods as (
+                  | "cash"
+                  | "pix"
+                  | "boleto"
+                  | "cheque"
+                  | "card"
+                )[],
+              }}
+              filteredCount={rows.length}
+              duplicateCount={duplicateIds.length}
+              selectedIds={selectedIds}
+              onSelectDuplicates={selectDuplicates}
+              onClearSelection={clearSelection}
+            />
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-secondary/40 text-xs uppercase text-muted-foreground">
                 <tr>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label="Selecionar todos os lançamentos"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left">Data</th>
                   <th className="px-3 py-2 text-left">Descrição</th>
                   <th className="px-3 py-2 text-left">Categoria</th>
@@ -159,7 +220,20 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
               </thead>
               <tbody>
                 {rows.map((t) => (
-                  <tr key={t.id} className="border-t border-border/60 hover:bg-secondary/30">
+                  <tr
+                    key={t.id}
+                    className={cn(
+                      "border-t border-border/60 hover:bg-secondary/30",
+                      selectedIds.includes(t.id) && "bg-secondary/40",
+                    )}
+                  >
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={selectedIds.includes(t.id)}
+                        onCheckedChange={() => toggleRow(t.id)}
+                        aria-label={`Selecionar lançamento ${t.description}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 numeric text-muted-foreground">
                       {formatDate(t.date)}
                     </td>
@@ -181,10 +255,11 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
                 ))}
                 {rows.length === 0 && !query.isLoading && (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       Nenhum registro no período.
                     </td>
                   </tr>
+
                 )}
               </tbody>
             </table>

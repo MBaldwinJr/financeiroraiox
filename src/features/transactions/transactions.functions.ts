@@ -189,6 +189,60 @@ export const deleteTransaction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const BulkIdsSchema = z.object({
+  companyId: z.string().uuid(),
+  ids: z.array(z.string().uuid()).min(1).max(2000),
+});
+
+export const bulkDeleteTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => BulkIdsSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    const CHUNK = 200;
+    let deleted = 0;
+    for (let i = 0; i < data.ids.length; i += CHUNK) {
+      const slice = data.ids.slice(i, i + CHUNK);
+      const { error } = await context.supabase
+        .from("transactions")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .in("id", slice);
+      if (error) throw new Error(error.message);
+      deleted += slice.length;
+    }
+    return { deleted };
+  });
+
+export const bulkDeleteTransactionsByFilter = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AllFilterSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    const { start, end } = rangeForFilters(data.year, data.month);
+    let q = context.supabase
+      .from("transactions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("company_id", data.companyId)
+      .is("deleted_at", null)
+      .gte("date", start)
+      .lt("date", end);
+
+    if (data.search) q = q.ilike("description", `%${data.search}%`);
+    if (data.kind) q = q.eq("kind", data.kind);
+    if (data.categoryIds?.length) q = q.in("category_id", data.categoryIds);
+    if (data.costCenterIds?.length) q = q.in("cost_center_id", data.costCenterIds);
+    if (data.bankAccountIds?.length) q = q.in("bank_account_id", data.bankAccountIds);
+    if (data.partyIds?.length) q = q.in("party_id", data.partyIds);
+    if (data.paymentMethods?.length) q = q.in("payment_method", data.paymentMethods);
+
+    const { data: rows, error } = await q.select("id");
+    const count = rows?.length ?? 0;
+
+    if (error) throw new Error(error.message);
+    return { deleted: count ?? 0 };
+  });
+
+
 export const toggleTransactionStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
