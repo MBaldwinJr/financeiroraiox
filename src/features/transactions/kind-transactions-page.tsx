@@ -173,10 +173,43 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
               {rows.length} registros
             </Badge>
           </div>
+          {companyId && (
+            <BulkDeleteBar
+              filter={{
+                companyId,
+                year: range.year,
+                month: range.month,
+                kind,
+                search: search || undefined,
+                categoryIds: filters.categoryIds,
+                costCenterIds: filters.costCenterIds,
+                bankAccountIds: filters.bankAccountIds,
+                paymentMethods: filters.paymentMethods as (
+                  | "cash"
+                  | "pix"
+                  | "boleto"
+                  | "cheque"
+                  | "card"
+                )[],
+              }}
+              filteredCount={rows.length}
+              duplicateCount={duplicateIds.length}
+              selectedIds={selectedIds}
+              onSelectDuplicates={selectDuplicates}
+              onClearSelection={clearSelection}
+            />
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-secondary/40 text-xs uppercase text-muted-foreground">
                 <tr>
+                  <th scope="col" className="px-3 py-2 text-left">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label="Selecionar todos os lançamentos"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left">Data</th>
                   <th className="px-3 py-2 text-left">Descrição</th>
                   <th className="px-3 py-2 text-left">Categoria</th>
@@ -187,7 +220,20 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
               </thead>
               <tbody>
                 {rows.map((t) => (
-                  <tr key={t.id} className="border-t border-border/60 hover:bg-secondary/30">
+                  <tr
+                    key={t.id}
+                    className={cn(
+                      "border-t border-border/60 hover:bg-secondary/30",
+                      selectedIds.includes(t.id) && "bg-secondary/40",
+                    )}
+                  >
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={selectedIds.includes(t.id)}
+                        onCheckedChange={() => toggleRow(t.id)}
+                        aria-label={`Selecionar lançamento ${t.description}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 numeric text-muted-foreground">
                       {formatDate(t.date)}
                     </td>
@@ -209,10 +255,11 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
                 ))}
                 {rows.length === 0 && !query.isLoading && (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       Nenhum registro no período.
                     </td>
                   </tr>
+
                 )}
               </tbody>
             </table>
