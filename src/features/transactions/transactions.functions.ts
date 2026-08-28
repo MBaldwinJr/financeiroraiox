@@ -62,7 +62,7 @@ export const listTransactions = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("transactions")
       .select(
-        "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name), cost_centers(name), bank_accounts(name), parties(name)",
+        "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name, dre_group), cost_centers(name), bank_accounts(name), parties(name)",
         { count: "exact" },
       )
       .eq("company_id", data.companyId)
@@ -100,7 +100,7 @@ type AllTxRow = {
   cost_center_id: string | null;
   bank_account_id: string | null;
   party_id: string | null;
-  categories: { name: string } | null;
+  categories: { name: string; dre_group: string | null } | null;
   cost_centers: { name: string } | null;
   bank_accounts: { name: string } | null;
   parties: { name: string } | null;
@@ -115,7 +115,7 @@ export const listAllTransactions = createServerFn({ method: "POST" })
       let q = context.supabase
         .from("transactions")
         .select(
-          "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name), cost_centers(name), bank_accounts(name), parties(name)",
+          "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name, dre_group), cost_centers(name), bank_accounts(name), parties(name)",
         )
         .eq("company_id", data.companyId)
         .is("deleted_at", null)
