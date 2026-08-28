@@ -235,7 +235,9 @@ export const bulkDeleteTransactionsByFilter = createServerFn({ method: "POST" })
     if (data.partyIds?.length) q = q.in("party_id", data.partyIds);
     if (data.paymentMethods?.length) q = q.in("payment_method", data.paymentMethods);
 
-    const { error, count } = await q.select("id", { count: "exact" });
+    const { data: rows, error } = await q.select("id");
+    const count = rows?.length ?? 0;
+
     if (error) throw new Error(error.message);
     return { deleted: count ?? 0 };
   });
