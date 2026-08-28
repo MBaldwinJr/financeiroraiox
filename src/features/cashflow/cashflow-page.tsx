@@ -61,7 +61,12 @@ export function CashflowPage() {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <KpiCard label="Total Entradas" value={totalIn} icon={TrendingUp} accent="success" />
-        <KpiCard label="Total Saídas" value={totalOut} icon={TrendingDown} accent="danger" />
+        <KpiCard
+          label="Total Saídas (exceto CMV)"
+          value={totalOut}
+          icon={TrendingDown}
+          accent="danger"
+        />
         <KpiCard
           label="Saldo do Período"
           value={saldo}
