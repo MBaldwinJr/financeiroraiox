@@ -129,7 +129,9 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="glass-card">
           <CardContent className="p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Total no período</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              {kind === "expense" ? "Total no período (exceto CMV)" : "Total no período"}
+            </p>
             <p className={cn("mt-2 text-2xl font-bold numeric", colorClass)}>
               <Icon className="mr-1 inline h-5 w-5" />
               {formatBRL(total)}
@@ -137,6 +139,11 @@ export function KindTransactionsPage({ kind, title, description }: Props) {
             <p className="mt-1 text-xs text-muted-foreground">
               {range.month ? MONTH_LABELS[range.month - 1] : "Ano"} {range.year}
             </p>
+            {kind === "expense" && cmvTotal > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                CMV apurado à parte: {formatBRL(cmvTotal)}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="glass-card md:col-span-2">
