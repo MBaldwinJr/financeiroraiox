@@ -72,7 +72,7 @@ function buildDre(monthly: Monthly): DreRow[] {
     row("(-) Despesas Operacionais", operational),
     row("(-) Outras Despesas", other),
     row("(=) Resultado Operacional", operatingResult, true),
-    row("(-) Total de Despesas", totalExpense),
+    row("(-) Total de Despesas (exceto CMV)", totalExpense),
     row("(=) Lucro Líquido", netProfit, true),
   ];
 }
