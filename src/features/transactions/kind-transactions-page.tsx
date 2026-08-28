@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Search, TrendingDown, TrendingUp } from "lucide-react";
 
 import { useCompanyStore } from "@/stores/company-store";
@@ -8,10 +8,13 @@ import { useFilterStore } from "@/stores/filter-store";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatBRL, formatDate, MONTH_LABELS } from "@/lib/money";
 import { listAllTransactions } from "@/features/transactions/transactions.functions";
+import { BulkDeleteBar } from "@/features/transactions/components/bulk-delete-bar";
 import { cn } from "@/lib/utils";
+
 
 interface Props {
   kind: "revenue" | "expense";
