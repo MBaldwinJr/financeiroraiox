@@ -9,10 +9,12 @@ import {
   computeExpenseComposition,
   computeKpis,
   computePrevious,
+  emptyMonthBucket,
   selectedMonthIndices,
   sumPrevYearTotals,
 } from "./dashboard.domain";
 import {
+  fetchCentralCashflow,
   fetchErpSales,
   fetchPaidExpenses,
   fetchPaidRevenue,
@@ -45,11 +47,9 @@ async function loadBasisRows(
   paidExpenseRows: PaidExpenseRow[];
 }> {
   if (basis === "cash") {
-    const [paidRows, paidExpenseRows] = await Promise.all([
-      fetchPaidRevenue(supabase, { companyId, start, end }),
-      fetchPaidExpenses(supabase, { companyId, start, end }),
-    ]);
-    return { paidRows, salesRows: [], paidExpenseRows };
+    // Cash is now sourced from the centralized financial engine. The legacy
+    // paid-row queries are retained only for non-cash compatibility paths.
+    return { paidRows: [], salesRows: [], paidExpenseRows: [] };
   }
   if (basis === "erp_sales") {
     const salesRows = await fetchErpSales(supabase, { companyId, start, end });
@@ -79,9 +79,34 @@ export const getFinancials = createServerFn({ method: "POST" })
     const basisRows = await loadBasisRows(context.supabase, basis, data.companyId, start, end);
 
     const { monthly, byPayment } = bucketTransactionsByMonth(txs);
-    applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
+
     if (basis === "cash") {
-      applyCashExpenses(monthly, basisRows.paidExpenseRows);
+      // P0.4: realized cash is now calculated by the database financial engine,
+      // combining legacy paid transactions with new payments without duplication.
+      const centralCashflow = await fetchCentralCashflow(context.supabase, {
+        companyId: data.companyId,
+        start,
+        end,
+      });
+
+      for (let i = 0; i < monthly.length; i += 1) {
+        monthly[i] = emptyMonthBucket();
+      }
+
+      for (const row of centralCashflow) {
+        const index = Number(row.payment_date.slice(5, 7)) - 1;
+        if (index < 0 || index > 11) continue;
+        monthly[index].revenue += row.inflow_cents;
+        monthly[index].expense += row.outflow_cents;
+        // Cash-flow is not a DRE. Put total realized outflow in operational
+        // only as a compatibility representation for the existing KPI engine.
+        monthly[index].operational += row.outflow_cents;
+      }
+    } else {
+      applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
+      if (basis === "cash") {
+        applyCashExpenses(monthly, basisRows.paidExpenseRows);
+      }
     }
 
     const prevMonthly = bucketPrevYear(prevRows);
