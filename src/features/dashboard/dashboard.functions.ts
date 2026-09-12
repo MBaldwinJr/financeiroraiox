@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  applyCashExpenses,
   applyRevenueBasis,
   bucketPrevYear,
   bucketTransactionsByMonth,
@@ -12,13 +13,13 @@ import {
   sumPrevYearTotals,
 } from "./dashboard.domain";
 import {
-  fetchCentralCashflow,
   fetchErpSales,
+  fetchPaidExpenses,
   fetchPaidRevenue,
   fetchPrevYearTransactions,
   fetchYearTransactions,
 } from "./dashboard.repository";
-import { emptyMonthBucket, type ErpSaleRow, type PaidRevenueRow, type RevenueBasis } from "./dashboard.types";
+import type { ErpSaleRow, PaidExpenseRow, PaidRevenueRow, RevenueBasis } from "./dashboard.types";
 
 const Schema = z.object({
   companyId: z.string().uuid(),
@@ -41,12 +42,20 @@ async function loadBasisRows(
 ): Promise<{
   paidRows: PaidRevenueRow[];
   salesRows: ErpSaleRow[];
+  paidExpenseRows: PaidExpenseRow[];
 }> {
+  if (basis === "cash") {
+    const [paidRows, paidExpenseRows] = await Promise.all([
+      fetchPaidRevenue(supabase, { companyId, start, end }),
+      fetchPaidExpenses(supabase, { companyId, start, end }),
+    ]);
+    return { paidRows, salesRows: [], paidExpenseRows };
+  }
   if (basis === "erp_sales") {
     const salesRows = await fetchErpSales(supabase, { companyId, start, end });
-    return { paidRows: [], salesRows };
+    return { paidRows: [], salesRows, paidExpenseRows: [] };
   }
-  return { paidRows: [], salesRows: [] };
+  return { paidRows: [], salesRows: [], paidExpenseRows: [] };
 }
 
 export const getFinancials = createServerFn({ method: "POST" })
@@ -70,31 +79,9 @@ export const getFinancials = createServerFn({ method: "POST" })
     const basisRows = await loadBasisRows(context.supabase, basis, data.companyId, start, end);
 
     const { monthly, byPayment } = bucketTransactionsByMonth(txs);
-
+    applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
     if (basis === "cash") {
-      // P0.4: realized cash is now calculated by the database financial engine,
-      // combining legacy paid transactions with new payments without duplication.
-      const centralCashflow = await fetchCentralCashflow(context.supabase, {
-        companyId: data.companyId,
-        start,
-        end,
-      });
-
-      for (let i = 0; i < monthly.length; i += 1) {
-        monthly[i] = emptyMonthBucket();
-      }
-
-      for (const row of centralCashflow) {
-        const index = Number(row.payment_date.slice(5, 7)) - 1;
-        if (index < 0 || index > 11) continue;
-        monthly[index].revenue += row.inflow_cents;
-        monthly[index].expense += row.outflow_cents;
-        // Compatibility representation for the existing KPI engine:
-        // cash outflow is treated as operational expense, not CMV.
-        monthly[index].operational += row.outflow_cents;
-      }
-    } else {
-      applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
+      applyCashExpenses(monthly, basisRows.paidExpenseRows);
     }
 
     const prevMonthly = bucketPrevYear(prevRows);

@@ -20,27 +20,6 @@ interface DateWindow {
   end: string;
 }
 
-export interface CentralCashflowRow {
-  payment_date: string;
-  inflow_cents: number;
-  outflow_cents: number;
-  net_cash_cents: number;
-}
-
-export async function fetchCentralCashflow(
-  supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
-): Promise<CentralCashflowRow[]> {
-  const { data, error } = await supabase.rpc("get_legacy_compatible_cashflow", {
-    p_company_id: companyId,
-    p_start_date: start,
-    p_end_date: end,
-  });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CentralCashflowRow[];
-}
-
 export function fetchYearTransactions(
   supabase: SupabaseClient,
   { companyId, start, end }: DateWindow,
