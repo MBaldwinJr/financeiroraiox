@@ -2,26 +2,23 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  applyCashExpenses,
   applyRevenueBasis,
   bucketPrevYear,
   bucketTransactionsByMonth,
   computeExpenseComposition,
   computeKpis,
   computePrevious,
-  emptyMonthBucket,
   selectedMonthIndices,
   sumPrevYearTotals,
 } from "./dashboard.domain";
 import {
   fetchCentralCashflow,
   fetchErpSales,
-  fetchPaidExpenses,
   fetchPaidRevenue,
   fetchPrevYearTransactions,
   fetchYearTransactions,
 } from "./dashboard.repository";
-import type { ErpSaleRow, PaidExpenseRow, PaidRevenueRow, RevenueBasis } from "./dashboard.types";
+import { emptyMonthBucket, type ErpSaleRow, type PaidRevenueRow, type RevenueBasis } from "./dashboard.types";
 
 const Schema = z.object({
   companyId: z.string().uuid(),
@@ -44,18 +41,12 @@ async function loadBasisRows(
 ): Promise<{
   paidRows: PaidRevenueRow[];
   salesRows: ErpSaleRow[];
-  paidExpenseRows: PaidExpenseRow[];
 }> {
-  if (basis === "cash") {
-    // Cash is now sourced from the centralized financial engine. The legacy
-    // paid-row queries are retained only for non-cash compatibility paths.
-    return { paidRows: [], salesRows: [], paidExpenseRows: [] };
-  }
   if (basis === "erp_sales") {
     const salesRows = await fetchErpSales(supabase, { companyId, start, end });
-    return { paidRows: [], salesRows, paidExpenseRows: [] };
+    return { paidRows: [], salesRows };
   }
-  return { paidRows: [], salesRows: [], paidExpenseRows: [] };
+  return { paidRows: [], salesRows: [] };
 }
 
 export const getFinancials = createServerFn({ method: "POST" })
@@ -98,15 +89,12 @@ export const getFinancials = createServerFn({ method: "POST" })
         if (index < 0 || index > 11) continue;
         monthly[index].revenue += row.inflow_cents;
         monthly[index].expense += row.outflow_cents;
-        // Cash-flow is not a DRE. Put total realized outflow in operational
-        // only as a compatibility representation for the existing KPI engine.
+        // Compatibility representation for the existing KPI engine:
+        // cash outflow is treated as operational expense, not CMV.
         monthly[index].operational += row.outflow_cents;
       }
     } else {
       applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
-      if (basis === "cash") {
-        applyCashExpenses(monthly, basisRows.paidExpenseRows);
-      }
     }
 
     const prevMonthly = bucketPrevYear(prevRows);
