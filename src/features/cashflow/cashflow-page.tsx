@@ -28,8 +28,10 @@ export function CashflowPage() {
     return <p className="text-sm text-muted-foreground">Carregando fluxo de caixa…</p>;
 
   const { monthly } = data;
-  // CMV é apurado à parte (reduz a Receita no Lucro Bruto) e não compõe o total de despesas.
+  // Fluxo de caixa considera apenas lançamentos pagos no mês do pagamento.
+  // O CMV é indicador da DRE e fica fora das saídas operacionais do caixa.
   const outflow = (m: (typeof monthly)[number]) => m.expense - m.cmv;
+  const periodMonthly = range.month ? [monthly[range.month - 1]] : monthly;
   const series = monthly.reduce<
     { month: string; entradas: number; saidas: number; saldoMes: number; saldoAcum: number }[]
   >((acc, m, i) => {
@@ -45,8 +47,8 @@ export function CashflowPage() {
     return acc;
   }, []);
 
-  const totalIn = monthly.reduce((a, m) => a + m.revenue, 0);
-  const totalOut = monthly.reduce((a, m) => a + outflow(m), 0);
+  const totalIn = periodMonthly.reduce((a, m) => a + m.revenue, 0);
+  const totalOut = periodMonthly.reduce((a, m) => a + outflow(m), 0);
   const saldo = totalIn - totalOut;
 
   return (
@@ -54,15 +56,15 @@ export function CashflowPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">Fluxo de Caixa — {range.year}</h1>
         <p className="text-sm text-muted-foreground">
-          Entradas, saídas e saldo acumulado ao longo do ano.
+          Valores realizados pela data do pagamento. O CMV não compõe as saídas; os gráficos mostram a evolução mensal do ano.
         </p>
       </header>
-      <FilterBar />
+      <FilterBar showRevenueBasis={false} />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <KpiCard label="Total Entradas" value={totalIn} icon={TrendingUp} accent="success" />
         <KpiCard
-          label="Total Saídas (exceto CMV)"
+          label="Total Saídas (sem CMV)"
           value={totalOut}
           icon={TrendingDown}
           accent="danger"
