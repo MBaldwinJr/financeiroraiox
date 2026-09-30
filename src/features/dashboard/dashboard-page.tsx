@@ -149,7 +149,7 @@ export function DashboardPage() {
           sparkline={sparkExp}
         />
         <KpiCard
-          label="Total Recebimentos"
+          label={basis === "cash" ? "Total Recebimentos" : basis === "erp_sales" ? "Vendas ERP" : "Receita no Período"}
           value={kpis.totalRevenue}
           icon={Banknote}
           accent="success"
@@ -279,7 +279,7 @@ export function DashboardPage() {
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Recebimentos por Forma</CardTitle>
+            <CardTitle className="text-sm font-medium">{basis === "cash" ? "Recebimentos por Forma" : basis === "erp_sales" ? "Forma de recebimento indisponível nas vendas ERP" : "Receita por Forma"}</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
