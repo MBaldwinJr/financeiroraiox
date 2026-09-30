@@ -90,6 +90,11 @@ export const getFinancials = createServerFn({ method: "POST" })
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
     if (basis === "cash") {
       applyCashExpenses(monthly, basisRows.paidExpenseRows);
+      for (const row of basisRows.paidRows) {
+        if (row.paid_at && row.payment_method && PAYMENT_METHODS.includes(row.payment_method as PaymentMethod)) {
+          byPayment[row.payment_method as PaymentMethod] += row.amount_cents;
+        }
+      }
     }
 
     const prevMonthly = bucketPrevYear(prevRows);
