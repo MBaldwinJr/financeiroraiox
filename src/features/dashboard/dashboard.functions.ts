@@ -19,7 +19,7 @@ import {
   fetchPrevYearTransactions,
   fetchYearTransactions,
 } from "./dashboard.repository";
-import type { ErpSaleRow, PaidExpenseRow, PaidRevenueRow, RevenueBasis } from "./dashboard.types";
+import { PAYMENT_METHODS, type ErpSaleRow, type PaidExpenseRow, type PaidRevenueRow, type RevenueBasis, type PaymentMethod } from "./dashboard.types";
 
 const Schema = z.object({
   companyId: z.string().uuid(),
@@ -78,7 +78,15 @@ export const getFinancials = createServerFn({ method: "POST" })
     });
     const basisRows = await loadBasisRows(context.supabase, basis, data.companyId, start, end);
 
-    const { monthly, byPayment } = bucketTransactionsByMonth(txs);
+    const { monthly } = bucketTransactionsByMonth(txs);
+    const byPayment = PAYMENT_METHODS.reduce((acc, method) => {
+      acc[method] = 0;
+      return acc;
+    }, {} as Record<PaymentMethod, number>);
+    if (basis === "accrual") {
+      const accrued = bucketTransactionsByMonth(txs).byPayment;
+      Object.assign(byPayment, accrued);
+    }
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
     if (basis === "cash") {
       applyCashExpenses(monthly, basisRows.paidExpenseRows);
