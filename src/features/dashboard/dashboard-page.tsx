@@ -109,7 +109,7 @@ export function DashboardPage() {
   const periodLabel = isMonth ? `${MONTH_LABELS[range.month! - 1]}/${range.year}` : `${range.year}`;
 
   const sparkRev = monthly.map((m) => fromCents(m.revenue));
-  const sparkExp = monthly.map((m) => fromCents(m.expense));
+  const sparkExp = monthly.map((m) => fromCents(m.expense - m.cmv));
   const sparkProfit = monthly.map((m) => fromCents(m.revenue - m.expense));
 
   return (
@@ -309,7 +309,7 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Fluxo de Caixa Mensal</CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo Mensal Acumulado (sem CMV)</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -318,7 +318,7 @@ export function DashboardPage() {
                   const prev = acc[i - 1]?.saldo ?? 0;
                   acc.push({
                     month: MONTH_LABELS[i],
-                    saldo: prev + fromCents(m.revenue - m.expense),
+                    saldo: prev + fromCents(m.revenue - (m.expense - m.cmv)),
                   });
                   return acc;
                 }, [])}
@@ -454,8 +454,11 @@ export function DashboardPage() {
                   { label: "Receita", value: query.data.kpis.grossRevenue },
                   { label: "(-) CMV", value: -query.data.kpis.cmv },
                   { label: "Lucro Bruto", value: query.data.kpis.grossProfit, total: true },
+                  { label: "(-) Fornecedores", value: -query.data.expenseComposition.supplier },
+                  { label: "(-) Fretes", value: -query.data.expenseComposition.freight },
                   { label: "(-) Fixas", value: -query.data.expenseComposition.fixed },
                   { label: "(-) Variáveis", value: -query.data.expenseComposition.variable },
+                  { label: "(-) Operacionais", value: -query.data.expenseComposition.operational },
                   {
                     label: "Result. Operacional",
                     value: query.data.kpis.operatingResult,
