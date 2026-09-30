@@ -44,6 +44,7 @@ export interface PrevTransactionRow {
 export interface PaidRevenueRow {
   paid_at: string;
   amount_cents: number;
+  payment_method: string | null;
 }
 
 export interface PaidExpenseRow {
