@@ -21,7 +21,7 @@ const YEARS = (() => {
   return [y - 2, y - 1, y, y + 1];
 })();
 
-export function FilterBar() {
+export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: boolean }) {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const { range, setRange, clear, categoryIds, costCenterIds, bankAccountIds, paymentMethods, setMulti } =
     useFilterStore();
@@ -114,7 +114,7 @@ export function FilterBar() {
       />
 
       <div className="ml-auto flex items-center gap-3">
-        <RevenueBasisToggle />
+        {showRevenueBasis && <RevenueBasisToggle />}
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={clear}>
             <X className="mr-1 h-4 w-4" /> Limpar filtros
