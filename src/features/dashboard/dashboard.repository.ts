@@ -45,9 +45,10 @@ export function fetchPrevYearTransactions(
   return fetchAllRows<PrevTransactionRow>((from, to) =>
     supabase
       .from("transactions")
-      .select("date, amount_cents, kind")
+      .select("date, amount_cents, kind, category:categories!inner(is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
+      .eq("categories.is_balance_sheet", false)
       .gte("date", start)
       .lt("date", end)
       .range(from, to) as PaginatedQuery<PrevTransactionRow>,
@@ -61,7 +62,7 @@ export function fetchPaidRevenue(
   return fetchAllRows<PaidRevenueRow>((from, to) =>
     supabase
       .from("transactions")
-      .select("paid_at, amount_cents")
+      .select("paid_at, amount_cents, payment_method")
       .eq("company_id", companyId)
       .eq("kind", "revenue")
       .eq("status", "paid")
