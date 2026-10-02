@@ -47,7 +47,6 @@ export function fetchPrevYearTransactions(
       .select("date, amount_cents, kind, category:categories(is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
-      .eq("categories.is_balance_sheet", false)
       .gte("date", start)
       .lt("date", end)
       .range(from, to) as PaginatedQuery<PrevTransactionRow>,
