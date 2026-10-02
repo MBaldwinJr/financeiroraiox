@@ -34,6 +34,7 @@ export function bucketTransactionsByMonth(txs: readonly TransactionRow[]): Bucke
   );
 
   for (const tx of txs) {
+    if (tx.category?.is_balance_sheet === true) continue;
     const bucket = monthly[monthIndex(tx.date)];
     if (tx.kind === "revenue") {
       bucket.revenue += tx.amount_cents;
@@ -62,7 +63,7 @@ export function applyRevenueBasis(
 
   if (basis === "cash") {
     for (const r of paidRows) {
-      if (!r.paid_at) continue;
+      if (!r.paid_at || r.category?.is_balance_sheet === true) continue;
       monthly[monthIndex(r.paid_at)].revenue += r.amount_cents;
     }
     return monthly;
@@ -96,7 +97,7 @@ export function applyCashExpenses(
     }
   }
   for (const r of paidExpenseRows) {
-    if (!r.paid_at) continue;
+    if (!r.paid_at || r.category?.is_balance_sheet === true) continue;
     const b = monthly[monthIndex(r.paid_at)];
     b.expense += r.amount_cents;
     const group = r.category?.dre_group ?? "other";
@@ -111,6 +112,7 @@ export function bucketPrevYear(rows: readonly PrevTransactionRow[]): PrevMonthBu
     expense: 0,
   }));
   for (const r of rows) {
+    if (r.category?.is_balance_sheet === true) continue;
     const b = prevMonthly[monthIndex(r.date)];
     if (r.kind === "revenue") b.revenue += r.amount_cents;
     else b.expense += r.amount_cents;
@@ -124,6 +126,7 @@ export function sumPrevYearTotals(rows: readonly PrevTransactionRow[]): {
 } {
   return rows.reduce(
     (acc, r) => {
+      if (r.category?.is_balance_sheet === true) return acc;
       if (r.kind === "revenue") acc.revenue += r.amount_cents;
       else acc.expense += r.amount_cents;
       return acc;
