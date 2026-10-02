@@ -52,7 +52,7 @@ export interface PaidRevenueRow {
 export interface PaidExpenseRow {
   paid_at: string;
   amount_cents: number;
-  category: { dre_group: DreGroup } | null;
+  category: { dre_group: DreGroup; is_balance_sheet?: boolean | null } | null;
 }
 
 export interface ErpSaleRow {
