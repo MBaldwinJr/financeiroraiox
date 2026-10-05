@@ -109,3 +109,7 @@ GRANT ALL ON public.company_invitations TO service_role;
 
 COMMENT ON TABLE public.company_invitations IS
   'Pending and historical invitations to join a company. Invitation emails are sent server-side.';
+
+
+-- Ensure PostgREST sees the new table immediately after migration.
+NOTIFY pgrst, 'reload schema';
