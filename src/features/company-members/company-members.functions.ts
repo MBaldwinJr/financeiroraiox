@@ -37,13 +37,16 @@ export const inviteCompanyMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InviteSchema.parse(input))
   .handler(async ({ context, data }) => {
-    const { data: allowed, error: roleError } = await context.supabase.rpc("has_company_role", {
-      p_company_id: data.companyId,
-      p_user_id: context.userId,
-      p_roles: ["owner", "admin"],
-    });
-    if (roleError) throw new Error(roleError.message);
-    if (!allowed) throw new Error("Apenas o proprietário ou administrador pode convidar usuários.");
+    const { data: membership, error: membershipError } = await context.supabase
+      .from("company_members")
+      .select("role")
+      .eq("company_id", data.companyId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (membershipError) throw new Error(membershipError.message);
+    if (!membership || !["owner", "admin"].includes(membership.role)) {
+      throw new Error("Apenas o proprietário ou administrador pode convidar usuários.");
+    }
 
     const { data: invitation, error: invitationError } = await context.supabase
       .from("company_invitations")
