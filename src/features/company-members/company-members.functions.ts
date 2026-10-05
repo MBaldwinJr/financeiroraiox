@@ -48,7 +48,10 @@ export const inviteCompanyMember = createServerFn({ method: "POST" })
       throw new Error("Apenas o proprietário ou administrador pode convidar usuários.");
     }
 
-    const { data: invitation, error: invitationError } = await context.supabase
+    // The generated Database type does not know about this new migration yet.
+    // Keep the typed client boundary above and use a local loose boundary for the new table.
+    const db = context.supabase as any;
+    const { data: invitation, error: invitationError } = await db
       .from("company_invitations")
       .insert({ company_id: data.companyId, email: data.email, role: data.role, invited_by: context.userId })
       .select("id")
@@ -66,10 +69,7 @@ export const inviteCompanyMember = createServerFn({ method: "POST" })
     });
 
     if (inviteError) {
-      await context.supabase
-        .from("company_invitations")
-        .update({ status: "failed" })
-        .eq("id", invitation.id);
+      await db.from("company_invitations").update({ status: "failed" }).eq("id", invitation.id);
       throw new Error(inviteError.message);
     }
 
