@@ -33,7 +33,9 @@ function nonEmptyString(value: unknown): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function getInviterName(userMetadata: Readonly<Record<string, unknown>> | null): string | undefined {
+function getInviterName(
+  userMetadata: Readonly<Record<string, unknown>> | null,
+): string | undefined {
   if (!userMetadata) return undefined;
   return (
     nonEmptyString(userMetadata.full_name) ??
@@ -79,7 +81,12 @@ export const inviteCompanyMember = createServerFn({ method: "POST" })
 
     const { data: invitation, error: invitationError } = await context.supabase
       .from("company_invitations")
-      .insert({ company_id: data.companyId, email: data.email, role: data.role, invited_by: context.userId })
+      .insert({
+        company_id: data.companyId,
+        email: data.email,
+        role: data.role,
+        invited_by: context.userId,
+      })
       .select("id")
       .single();
     if (invitationError) {
