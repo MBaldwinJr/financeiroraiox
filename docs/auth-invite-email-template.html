@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light only" />
+    <title>Você foi convidado para uma empresa no Financeiro Raio-X</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#0b1220;color:#172033;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+      Aceite seu convite para acessar uma empresa no Financeiro Raio-X.
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#0b1220;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;">
+            <tr>
+              <td style="padding:0 8px 24px;color:#ffffff;">
+                <div style="font-size:22px;line-height:28px;font-weight:700;">Financeiro Raio-X</div>
+                <div style="margin-top:4px;font-size:13px;line-height:20px;color:#a7b2c5;">Gestão financeira empresarial</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+                <div style="height:4px;background-color:#25b878;line-height:4px;font-size:4px;">&nbsp;</div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td style="padding:40px 40px 16px;">
+                      <h1 style="margin:0;color:#101827;font-size:28px;line-height:36px;font-weight:700;">Você foi convidado</h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 40px;color:#435066;font-size:16px;line-height:26px;">
+                      <p style="margin:0 0 18px;">
+                        {{ if .Data.recipient_name }}Olá, {{ .Data.recipient_name }}!{{ else }}Olá!{{ end }}
+                      </p>
+                      <p style="margin:0 0 20px;">
+                        Você recebeu um convite para acessar a empresa <strong style="color:#101827;">{{ .Data.company_name }}</strong> no Financeiro Raio-X.
+                      </p>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;background-color:#f2f5f8;border:1px solid #dde3ea;border-radius:6px;">
+                        <tr>
+                          <td style="padding:18px 20px;">
+                            <div style="font-size:12px;line-height:18px;color:#667287;text-transform:uppercase;">Perfil de acesso</div>
+                            <div style="margin-top:3px;color:#101827;font-size:16px;line-height:24px;font-weight:700;">{{ .Data.role_label }}</div>
+                            {{ if .Data.inviter_name }}
+                            <div style="margin-top:14px;font-size:14px;line-height:22px;color:#526077;">Convite enviado por <strong style="color:#101827;">{{ .Data.inviter_name }}</strong>{{ if .Data.inviter_email }} ({{ .Data.inviter_email }}){{ end }}</div>
+                            {{ else if .Data.inviter_email }}
+                            <div style="margin-top:14px;font-size:14px;line-height:22px;color:#526077;">Convite enviado por <strong style="color:#101827;">{{ .Data.inviter_email }}</strong></div>
+                            {{ end }}
+                          </td>
+                        </tr>
+                      </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
+                        <tr>
+                          <td align="center" bgcolor="#15945f" style="border-radius:6px;">
+                            <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:16px;line-height:20px;font-weight:700;border-radius:6px;">Aceitar convite</a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#667287;">Este convite é válido por 7 dias.</p>
+                      <p style="margin:0 0 8px;font-size:13px;line-height:20px;color:#667287;">Se o botão não funcionar, copie e cole este endereço no navegador:</p>
+                      <p style="margin:0 0 24px;word-break:break-all;font-size:13px;line-height:20px;">
+                        <a href="{{ .ConfirmationURL }}" style="color:#12764e;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                      </p>
+                      <div style="border-top:1px solid #e3e8ee;padding-top:20px;font-size:13px;line-height:21px;color:#667287;">Se você não esperava este convite, pode ignorar este e-mail.</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:28px 40px 36px;"></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 8px 0;color:#8e9aaf;font-size:12px;line-height:18px;">Financeiro Raio-X • Gestão financeira empresarial</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
