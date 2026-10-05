@@ -1,47 +1,23 @@
-# Plan: Duplicate Exclusion and Audit Enhancements
+# Plano: convite profissional por e-mail
 
-Implement a automated validation to ensure duplicates in PDFs are not double-counted and provide tools to audit and fix existing duplicates.
+Manter o fluxo atual de convite e trocar apenas a apresentação e os dados enviados ao e-mail de autenticação.
 
-## User Review Required
+## Implementação
 
-> [!IMPORTANT]
-> The deduplication logic will use a combination of Date, Amount, Description, and ERP Code to identify unique transactions. If these fields are identical, the system will treat them as potential duplicates.
+- Preservar `company_invitations`, suas políticas, o status `failed` e a chamada atual de convite.
+- Enriquecer os metadados do convite com empresa, remetente e papel, usando apenas dados validados no servidor.
+- Criar o template de convite em português-BR com visual Financeiro Raio-X, CTA ligado à URL real da autenticação, link alternativo e aviso de segurança.
+- Usar somente variáveis oficiais do template de autenticação; nenhum endereço de ação será fabricado.
+- Manter credenciais administrativas exclusivamente no servidor e substituir o limite de tipagem inseguro já existente.
+- Verificar compilação e o fluxo de erro sem alterar a semântica de aceite.
 
-- Should we allow the user to *force* the import of a duplicate if they confirm it's a separate transaction?
-- Should the "Clean Duplicates" button in Audit remove transactions based on identical fingerprints?
+## Dependência externa
 
-## Proposed Changes
+O projeto ainda não possui domínio de e-mail configurado. O código e o template podem ser preparados agora, mas o envio com a identidade visual própria só será ativado após configurar e verificar um domínio da empresa. Até lá, convites continuam usando o remetente padrão da plataforma.
 
-### Database & Backend
-#### [import-jobs.functions.ts]
-- Update `diagnoseImportJob` to identify transactions that are already in the database with the same fingerprint.
-- Add `cleanDuplicateTransactions` server function to delete transactions with duplicate fingerprints within the same company.
+## Validação
 
-#### [process-import-jobs.ts]
-- Enhance the fingerprinting logic to be even more robust.
-- Ensure the `existingSet` lookup correctly handles both current and legacy fingerprints to prevent re-importing data processed by older parser versions.
-
-### Import UI
-#### [erp-pdf-import-page.tsx]
-- Add a toggle/option: "Atualizar lançamentos existentes e remover ausentes" (Update existing and remove missing).
-- Implement logic in `importMut` to send this flag to the backend if selected.
-
-### Audit & Diagnostics
-#### [dre-audit-page.tsx]
-- Add a new inconsistency reason: `duplicidade_detectada` (Duplicate detected).
-- Add a "Excluir Duplicidades" (Delete Duplicates) button in the bulk actions bar.
-- Add a KPI card for total duplicates found.
-
-#### [dre-audit.functions.ts]
-- Update `getDreAudit` to identify transactions sharing the same fingerprint.
-- Implement `deleteBulkTransactions` server function.
-
-## Technical Details
-- **Fingerprint Logic**: `sha256(companyId | date | kind | amountCents | normalize(description) | docNumber | erpCode)`.
-- **Deduplication**: Use a windowed approach in the worker to check for existing fingerprints before insertion.
-- **Audit logic**: Group transactions by `fingerprint` and `company_id`. Any group with `count > 1` is an issue.
-
-## Validation Plan
-- Perform a test import of a PDF with known duplicates (already handled by the parser, but verifying the DB check).
-- Run the Audit tool on the current dataset to see if it correctly identifies the 8 legitimate vs 680 illegitimate duplicates mentioned in history.
-- Verify that "Delete Duplicates" only removes the redundant copies, leaving one unique instance.
+- Conferir assunto, conteúdo dinâmico e URL real de confirmação.
+- Verificar o template em telas estreitas e clientes de e-mail com CSS inline.
+- Confirmar que falhas de envio continuam marcando o convite como `failed`.
+- Confirmar compilação sem erros.
