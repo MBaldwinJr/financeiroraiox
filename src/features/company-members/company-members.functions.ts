@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateInviteToken, hashInviteToken, INVITE_TOKEN_PATTERN } from "./invitation-token";
 
@@ -127,11 +129,11 @@ const CompanyIdSchema = z.object({ companyId: z.string().uuid() });
 const TokenSchema = z.object({ token: z.string().regex(INVITE_TOKEN_PATTERN) });
 
 async function assertCanManage(
-  supabase: { from: (t: "company_members") => ReturnType<SupabaseLike["from"]> } | SupabaseLike,
+  supabase: SupabaseClient<Database>,
   companyId: string,
   userId: string,
 ): Promise<void> {
-  const { data, error } = await (supabase as SupabaseLike)
+  const { data, error } = await supabase
     .from("company_members")
     .select("role")
     .eq("company_id", companyId)
