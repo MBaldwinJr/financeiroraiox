@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedReconciliacaoRouteImport } from './routes/_authenticated/reconciliacao'
@@ -53,6 +54,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
   id: '/vendas',
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/dre/$group': typeof AuthenticatedDreGroupRoute
   '/dre/linha/$line': typeof AuthenticatedDreLinhaLineRoute
   '/api/public/hooks/process-import-jobs': typeof ApiPublicHooksProcessImportJobsRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/vendas': typeof AuthenticatedVendasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/': typeof AuthenticatedIndexRoute
   '/dre/$group': typeof AuthenticatedDreGroupRoute
   '/dre/linha/$line': typeof AuthenticatedDreLinhaLineRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_authenticated/reconciliacao': typeof AuthenticatedReconciliacaoRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/dre_/$group': typeof AuthenticatedDreGroupRoute
   '/_authenticated/dre_/linha/$line': typeof AuthenticatedDreLinhaLineRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/reconciliacao'
     | '/relatorios'
     | '/vendas'
+    | '/convite/$token'
     | '/dre/$group'
     | '/dre/linha/$line'
     | '/api/public/hooks/process-import-jobs'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/reconciliacao'
     | '/relatorios'
     | '/vendas'
+    | '/convite/$token'
     | '/'
     | '/dre/$group'
     | '/dre/linha/$line'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reconciliacao'
     | '/_authenticated/relatorios'
     | '/_authenticated/vendas'
+    | '/convite/$token'
     | '/_authenticated/'
     | '/_authenticated/dre_/$group'
     | '/_authenticated/dre_/linha/$line'
@@ -395,6 +407,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   ApiPublicHooksProcessImportJobsRoute: typeof ApiPublicHooksProcessImportJobsRoute
 }
 
@@ -420,6 +433,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/vendas': {
       id: '/_authenticated/vendas'
@@ -679,6 +699,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   ApiPublicHooksProcessImportJobsRoute: ApiPublicHooksProcessImportJobsRoute,
 }
 export const routeTree = rootRouteImport
