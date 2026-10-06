@@ -142,41 +142,53 @@ export type Database = {
       company_invitations: {
         Row: {
           accepted_at: string | null
+          accepted_by: string | null
+          cancelled_at: string | null
           company_id: string
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           id: string
+          invite_type: string
           invited_at: string
           invited_by: string
           role: Database["public"]["Enums"]["app_role"]
           status: string
+          token_hash: string | null
           updated_at: string
         }
         Insert: {
           accepted_at?: string | null
+          accepted_by?: string | null
+          cancelled_at?: string | null
           company_id: string
           created_at?: string
-          email: string
+          email?: string | null
           expires_at?: string
           id?: string
+          invite_type?: string
           invited_at?: string
           invited_by: string
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          token_hash?: string | null
           updated_at?: string
         }
         Update: {
           accepted_at?: string | null
+          accepted_by?: string | null
+          cancelled_at?: string | null
           company_id?: string
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           id?: string
+          invite_type?: string
           invited_at?: string
           invited_by?: string
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          token_hash?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -697,6 +709,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_link_invitation: { Args: { _token_hash: string }; Returns: string }
       consume_rate_limit: {
         Args: {
           _capacity: number
@@ -705,6 +718,16 @@ export type Database = {
           _refill_per_sec: number
         }
         Returns: boolean
+      }
+      get_link_invitation: {
+        Args: { _token_hash: string }
+        Returns: {
+          already_member: boolean
+          company_name: string
+          expired: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+        }[]
       }
       has_company_role: {
         Args: {
