@@ -12,6 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
+import { PENDING_INVITE_STORAGE_KEY } from "@/features/company-members/invitation-token";
+
+function goAfterAuth(navigate: ReturnType<typeof useNavigate>) {
+  const token = window.sessionStorage.getItem(PENDING_INVITE_STORAGE_KEY);
+  if (token) {
+    navigate({ to: "/convite/$token", params: { token }, replace: true });
+    return;
+  }
+  goAfterAuth(navigate);
+}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -32,7 +42,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard", replace: true });
+      if (data.user) goAfterAuth(navigate);
     });
   }, [navigate]);
 
@@ -96,7 +106,7 @@ function AuthPage() {
             onClick={async () => {
               setLoading(true);
               const r = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: window.location.origin,
+                redirect_uri: `${window.location.origin}/auth`,
               });
               if (r.error) {
                 toast.error("Falha ao entrar com Google");
@@ -104,7 +114,7 @@ function AuthPage() {
                 return;
               }
               if (r.redirected) return;
-              navigate({ to: "/dashboard", replace: true });
+              goAfterAuth(navigate);
             }}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -154,7 +164,7 @@ function AuthPage() {
                     toast.error(error.message);
                     return;
                   }
-                  navigate({ to: "/dashboard", replace: true });
+                  goAfterAuth(navigate);
                 }}
               />
             </TabsContent>
@@ -179,7 +189,7 @@ function AuthPage() {
                     email,
                     password,
                   });
-                  if (!signInErr) navigate({ to: "/dashboard", replace: true });
+                  if (!signInErr) goAfterAuth(navigate);
                 }}
               />
             </TabsContent>
