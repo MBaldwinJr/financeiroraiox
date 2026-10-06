@@ -20,7 +20,7 @@ function goAfterAuth(navigate: ReturnType<typeof useNavigate>) {
     navigate({ to: "/convite/$token", params: { token }, replace: true });
     return;
   }
-  goAfterAuth(navigate);
+  navigate({ to: "/dashboard", replace: true });
 }
 
 export const Route = createFileRoute("/auth")({
