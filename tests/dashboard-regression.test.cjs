@@ -154,3 +154,29 @@ test("resultado acumulado subtrai CMV uma vez, sem somá-lo de volta", () => {
   assert.equal(cumulative[11], 10000);
   assert.equal(cumulative[11], domain.computeKpis(monthly, domain.selectedMonthIndices(null)).netProfit);
 });
+
+test("composição de pagamentos por período e regime não mistura meses", () => {
+  const transactions = [
+    tx({ competencia: "2026-01-12", amount_cents: 12000, payment_method: "pix" }),
+    tx({ competencia: "2026-02-12", amount_cents: 34000, payment_method: "card" }),
+    tx({ competencia: "2026-02-12", amount_cents: 90000, kind: "expense", payment_method: "pix" }),
+    tx({ competencia: "2026-02-14", amount_cents: 70000, category: { is_balance_sheet: true }, payment_method: "pix" }),
+  ];
+  const paid = [
+    { paid_at: "2026-01-12", amount_cents: 15000, payment_method: "boleto", category: { is_balance_sheet: false } },
+    { paid_at: "2026-02-12", amount_cents: 7000, payment_method: "pix", category: { is_balance_sheet: false } },
+    { paid_at: "2026-02-12", amount_cents: 9999, payment_method: "pix", category: { is_balance_sheet: true } },
+  ];
+  const jan = domain.paymentBreakdownForPeriod("accrual", 1, transactions, paid);
+  const feb = domain.paymentBreakdownForPeriod("accrual", 2, transactions, paid);
+  assert.equal(jan.pix, 12000);
+  assert.equal(feb.card, 34000);
+  assert.equal(feb.pix, 0);
+  const cashFebruary = domain.paymentBreakdownForPeriod("cash", 2, transactions, paid);
+  assert.equal(cashFebruary.pix, 7000);
+  assert.equal(cashFebruary.boleto, 0);
+  const yearly = domain.paymentBreakdownForPeriod("accrual", null, transactions, paid);
+  assert.equal(yearly.pix, 12000);
+  assert.equal(yearly.card, 34000);
+  assert.equal(domain.paymentBreakdownForPeriod("erp_sales", null, transactions, paid).pix, 0);
+});
