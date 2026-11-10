@@ -232,6 +232,46 @@ export function DreAuditPage() {
             </Card>
           </div>
 
+          {data.unmappedGroups.length > 0 && (
+            <Card>
+              <CardHeader className="space-y-2">
+                <CardTitle className="text-base">Categorias pendentes de enquadramento na DRE</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Total consolidado de todos os lançamentos analisados, não apenas os 500 exemplos abaixo.
+                  Categorias patrimoniais não aparecem nesta lista. Valores não devem ser corrigidos automaticamente.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Linha DRE atual</TableHead>
+                        <TableHead className="text-right">Lançamentos</TableHead>
+                        <TableHead className="text-right">Despesas</TableHead>
+                        <TableHead className="text-right">Receitas</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.unmappedGroups.map((group) => (
+                        <TableRow key={group.categoryId ?? "sem-categoria"}>
+                          <TableCell className="font-medium">{group.categoryName}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {group.dreLine ?? "Sem linha"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{group.count}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatBRL(group.expenseCents)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatBRL(group.revenueCents)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <CardTitle>Lançamentos com inconsistência (top 500)</CardTitle>
