@@ -35,6 +35,7 @@ import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-fil
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
 import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
+import { DreReconciliationCard } from "@/features/dre/reconciliation-card";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,8 @@ export function DashboardPage() {
           )}
         </div>
       )}
+
+      {basis === "accrual" && <DreReconciliationCard />}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard noData={!hasPeriodData}
