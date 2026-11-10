@@ -22,13 +22,20 @@ const FILTER_COLUMNS = [
 ] as const;
 
 /** Partilha seleção entre cliente e servidor, sem enviar funções do Zustand. */
-export function selectFinancialFilters(state: FinancialFilters): FinancialFilters {
+type FilterSelection = Omit<FinancialFilters, "paymentMethods"> & { paymentMethods?: string[] };
+const PAYMENT_METHODS = ["cash", "pix", "boleto", "cheque", "card"] as const;
+type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export function selectFinancialFilters(state: FilterSelection): FinancialFilters {
+  const paymentMethods = state.paymentMethods?.filter(
+    (value): value is PaymentMethod => PAYMENT_METHODS.includes(value as PaymentMethod),
+  );
   return {
     categoryIds: state.categoryIds,
     costCenterIds: state.costCenterIds,
     bankAccountIds: state.bankAccountIds,
     partyIds: state.partyIds,
-    paymentMethods: state.paymentMethods,
+    paymentMethods,
   };
 }
 
