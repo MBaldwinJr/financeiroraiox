@@ -33,7 +33,7 @@ export interface TransactionRow {
   amount_cents: number;
   kind: "revenue" | "expense";
   payment_method: string | null;
-  category: { dre_group: DreGroup; is_balance_sheet?: boolean | null } | null;
+  category: { dre_group: DreGroup; dre_line?: string | null; is_balance_sheet?: boolean | null } | null;
 }
 
 export interface PrevTransactionRow {
