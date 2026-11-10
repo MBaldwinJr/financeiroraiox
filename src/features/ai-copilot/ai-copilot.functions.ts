@@ -23,6 +23,7 @@ const Schema = financialFiltersSchema.extend({
 });
 
 interface AiTxRow {
+  date: string;
   competencia: string;
   amount_cents: number;
   kind: "revenue" | "expense";
@@ -56,7 +57,7 @@ export const askFinanceAI = createServerFn({ method: "POST" })
         applyFinancialFilters(
           context.supabase
             .from("transactions")
-            .select("competencia, amount_cents, kind, payment_method, category:categories(name, dre_group, dre_line, is_balance_sheet)")
+            .select("date, competencia, amount_cents, kind, payment_method, category:categories(name, dre_group, dre_line, is_balance_sheet)")
             .eq("company_id", data.companyId)
             .is("deleted_at", null)
             .gte("competencia", start)
