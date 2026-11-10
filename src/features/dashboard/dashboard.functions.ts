@@ -8,6 +8,7 @@ import {
   bucketTransactionsByMonth,
   computeExpenseComposition,
   computeKpis,
+  hasFinancialActivity,
   computePrevious,
   selectedMonthIndices,
 } from "./dashboard.domain";
@@ -102,6 +103,14 @@ export const getFinancials = createServerFn({ method: "POST" })
     const kpis = computeKpis(monthly, indices);
     const previous = computePrevious(data.month, data.year, monthly, previousMonths);
     const expenseComposition = computeExpenseComposition(monthly, indices);
+    const periodActivity = {
+      hasSelectedPeriodData: hasFinancialActivity(
+        basis, data.month, txs, basisRows.paidRows, basisRows.paidExpenseRows, basisRows.salesRows,
+      ),
+      hasYearData: hasFinancialActivity(
+        basis, null, txs, basisRows.paidRows, basisRows.paidExpenseRows, basisRows.salesRows,
+      ),
+    };
 
     return {
       kpis: { ...kpis, prev: previous },
@@ -109,5 +118,6 @@ export const getFinancials = createServerFn({ method: "POST" })
       prevMonthly,
       byPayment,
       expenseComposition,
+      periodActivity,
     };
   });

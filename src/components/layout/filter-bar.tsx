@@ -22,7 +22,8 @@ const YEARS = (() => {
   return [y - 2, y - 1, y, y + 1];
 })();
 
-export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: boolean }) {
+export function FilterBar({ showRevenueBasis = true, appearance = "default" }: { showRevenueBasis?: boolean; appearance?: "default" | "light" }) {
+  const light = appearance === "light";
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const { range, setRange, clear, categoryIds, costCenterIds, bankAccountIds, partyIds, paymentMethods, setMulti } =
     useFilterStore();
@@ -62,12 +63,12 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
         value={String(range.year)}
         onValueChange={(v) => setRange({ ...range, year: Number(v) })}
       >
-        <SelectTrigger className="w-[110px]">
+        <SelectTrigger className={light ? "w-[110px] border-slate-200 bg-white text-slate-800" : "w-[110px]"}>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className={light ? "border-slate-200 bg-white text-slate-800" : undefined}>
           {YEARS.map((y) => (
-            <SelectItem key={y} value={String(y)}>
+            <SelectItem key={y} value={String(y)} className={light ? "focus:bg-blue-50 focus:text-blue-900" : undefined}>
               {y}
             </SelectItem>
           ))}
@@ -77,13 +78,13 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
         value={range.month ? String(range.month) : "all"}
         onValueChange={(v) => setRange({ ...range, month: v === "all" ? null : Number(v) })}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className={light ? "w-[140px] border-slate-200 bg-white text-slate-800" : "w-[140px]"}>
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Ano inteiro</SelectItem>
+        <SelectContent className={light ? "border-slate-200 bg-white text-slate-800" : undefined}>
+          <SelectItem value="all" className={light ? "focus:bg-blue-50 focus:text-blue-900" : undefined}>Ano inteiro</SelectItem>
           {MONTH_LABELS.map((m, i) => (
-            <SelectItem key={m} value={String(i + 1)}>
+            <SelectItem key={m} value={String(i + 1)} className={light ? "focus:bg-blue-50 focus:text-blue-900" : undefined}>
               {m}
             </SelectItem>
           ))}
@@ -91,30 +92,35 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
       </Select>
 
       <MultiPickerCompact
+        light={light}
         label="Categoria"
         options={(cats.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         value={categoryIds}
         onChange={(ids) => setMulti("categoryIds", ids)}
       />
       <MultiPickerCompact
+        light={light}
         label="Centro de custo"
         options={(ccs.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         value={costCenterIds}
         onChange={(ids) => setMulti("costCenterIds", ids)}
       />
       <MultiPickerCompact
+        light={light}
         label="Conta"
         options={(bas.data ?? []).map((c) => ({ id: c.id, name: c.name }))}
         value={bankAccountIds}
         onChange={(ids) => setMulti("bankAccountIds", ids)}
       />
       <MultiPickerCompact
+        light={light}
         label="Cliente/Fornecedor"
         options={(parties.data ?? []).map((p) => ({ id: p.id, name: p.name }))}
         value={partyIds}
         onChange={(ids) => setMulti("partyIds", ids)}
       />
       <MultiPickerCompact
+        light={light}
         label="Pagamento"
         options={[
           { id: "cash", name: "Dinheiro" },
@@ -145,8 +151,10 @@ function MultiPickerCompact({
   options,
   value,
   onChange,
+  light = false,
 }: {
   label: string;
+  light?: boolean;
   options: { id: string; name: string }[];
   value: string[];
   onChange: (ids: string[]) => void;
@@ -164,15 +172,16 @@ function MultiPickerCompact({
         <Button
           type="button"
           variant="outline"
-          className="w-[170px] justify-between gap-2"
+          className={light ? "w-[170px] justify-between gap-2 border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-900" : "w-[170px] justify-between gap-2"}
           aria-label={`${label} — ${value.length ? `${value.length} selecionado(s)` : "Todos"}`}
         >
           <span className="truncate">{selectedLabel}</span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+      <DropdownMenuContent align="start" className={light ? "max-h-72 w-56 overflow-y-auto border-slate-200 bg-white text-slate-800 shadow-lg" : "max-h-72 w-56 overflow-y-auto"}>
         <DropdownMenuCheckboxItem
+          className={light ? "focus:bg-blue-50 focus:text-blue-900 data-[state=checked]:text-blue-700" : undefined}
           checked={value.length === 0}
           onCheckedChange={() => onChange([])}
           onSelect={(e) => e.preventDefault()}
@@ -181,6 +190,7 @@ function MultiPickerCompact({
         </DropdownMenuCheckboxItem>
         {options.map((o) => (
           <DropdownMenuCheckboxItem
+            className={light ? "focus:bg-blue-50 focus:text-blue-900 data-[state=checked]:text-blue-700" : undefined}
             key={o.id}
             checked={value.includes(o.id)}
             onCheckedChange={(checked) =>

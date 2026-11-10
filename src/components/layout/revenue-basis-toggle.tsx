@@ -2,8 +2,8 @@ import { useFilterStore, type RevenueBasis } from "@/stores/filter-store";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const OPTIONS: { value: RevenueBasis; label: string; hint: string }[] = [
-  { value: "accrual", label: "Competência", hint: "Data do lançamento" },
-  { value: "cash", label: "Caixa", hint: "Data do recebimento" },
+  { value: "accrual", label: "Competência", hint: "Data de competência" },
+  { value: "cash", label: "Caixa", hint: "Data de liquidação (recebimentos e pagamentos)" },
   { value: "erp_sales", label: "Vendas ERP", hint: "PDF do ERP" },
 ];
 

@@ -9,6 +9,7 @@ import {
   Banknote,
   Percent,
   CircleDollarSign,
+  Info,
 } from "lucide-react";
 import {
   Area,
@@ -36,6 +37,7 @@ import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TopList } from "@/components/charts/top-list";
 import { TreemapChart } from "@/components/charts/treemap-chart";
 import { Heatmap } from "@/components/charts/heatmap";
@@ -75,6 +77,7 @@ export function DashboardPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
   const basis = useFilterStore((s) => s.revenueBasis);
+  const setRange = useFilterStore((s) => s.setRange);
   const filterState = useFilterStore();
   const filters = selectFinancialFilters(filterState);
   const filterKey = financialFiltersKey(filters);
@@ -114,11 +117,16 @@ export function DashboardPage() {
 
   const { kpis, monthly, prevMonthly, byPayment, expenseComposition } = query.data;
   const isMonth = range.month != null;
+  const hasPeriodData = query.data.periodActivity.hasSelectedPeriodData;
+  const hasExpenseBreakdown = Object.values(expenseComposition).some((value) => value > 0);
   const periodLabel = isMonth ? `${MONTH_LABELS[range.month! - 1]}/${range.year}` : `${range.year}`;
 
   const sparkRev = monthly.map((m) => fromCents(m.revenue));
   const sparkExp = monthly.map((m) => fromCents(m.expense - m.cmv));
   const sparkProfit = monthly.map((m) => fromCents(m.revenue - m.expense));
+  const expenseBreakdown = Object.entries(expenseComposition)
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => ({ name: EXPENSE_LABELS[key] ?? key, value: fromCents(value) }));
 
   return (
     <div className="dashboard-premium min-h-[calc(100vh-8rem)] space-y-6 rounded-[28px] bg-[#f5f8fe] p-4 text-[#16243a] shadow-sm sm:p-6 lg:p-8">
@@ -129,54 +137,71 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <FilterBar />
+      <FilterBar appearance="light" />
+
+      {!hasPeriodData && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white px-5 py-4 text-[#294568] shadow-sm">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold">Nenhuma movimentação encontrada em {periodLabel}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Os indicadores mostram o período selecionado. Os gráficos de evolução continuam exibindo o ano inteiro; valores de outros meses não pertencem ao resultado deste período.</p>
+            </div>
+          </div>
+          {isMonth && (
+            <Button variant="outline" size="sm" onClick={() => setRange({ ...range, month: null })} className="border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 hover:text-blue-900">
+              Ver ano inteiro
+            </Button>
+          )}
+        </div>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Receita Bruta"
           value={kpis.grossRevenue}
-          prev={kpis.prev?.revenue}
+          prev={hasPeriodData ? kpis.prev?.revenue : undefined}
           icon={TrendingUp}
           accent="success"
-          sparkline={sparkRev}
+          sparkline={!isMonth && hasPeriodData ? sparkRev : undefined}
         />
-        <KpiCard label="CMV" value={kpis.cmv} icon={ShoppingCart} accent="warning" />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData} label="CMV" value={kpis.cmv} icon={ShoppingCart} accent="warning" />
+        <KpiCard noData={!hasPeriodData}
           label="Lucro Bruto"
           value={kpis.grossProfit}
           icon={PiggyBank}
           accent="info"
-          sparkline={sparkProfit}
+          sparkline={!isMonth && hasPeriodData ? sparkProfit : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Total Despesas"
           value={kpis.totalExpenses}
-          prev={kpis.prev?.expense}
+          prev={hasPeriodData ? kpis.prev?.expense : undefined}
           icon={TrendingDown}
           accent="danger"
-          sparkline={sparkExp}
+          sparkline={!isMonth && hasPeriodData ? sparkExp : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label={basis === "cash" ? "Total Recebimentos" : basis === "erp_sales" ? "Vendas ERP" : "Receita no Período"}
           value={kpis.totalRevenue}
           icon={Banknote}
           accent="success"
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Resultado Operacional"
           value={kpis.operatingResult}
           icon={CircleDollarSign}
           accent={kpis.operatingResult >= 0 ? "success" : "danger"}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Lucro Líquido"
           value={kpis.netProfit}
-          prev={kpis.prev?.netProfit}
+          prev={hasPeriodData ? kpis.prev?.netProfit : undefined}
           icon={Receipt}
           accent={kpis.netProfit >= 0 ? "success" : "danger"}
-          sparkline={sparkProfit}
+          sparkline={!isMonth && hasPeriodData ? sparkProfit : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Margem"
           value={kpis.margin}
           icon={Percent}
@@ -188,7 +213,8 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="glass-card lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Receita x Despesa — {range.year}</CardTitle>
+            <CardTitle className="text-sm font-medium">Receita x Despesa — evolução anual de {range.year}</CardTitle>
+            {isMonth && <p className="mt-1 text-xs text-slate-500">Visão de janeiro a dezembro · indicadores acima: {periodLabel}</p>}
           </CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -220,31 +246,36 @@ export function DashboardPage() {
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Composição de Despesas</CardTitle>
+            <CardTitle className="text-sm font-medium">Composição de Despesas — {periodLabel}</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={Object.entries(expenseComposition)
-                    .filter(([, v]) => v > 0)
-                    .map(([k, v]) => ({ name: EXPENSE_LABELS[k] ?? k, value: fromCents(v) }))}
-                  dataKey="value"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={3}
-                >
-                  {Object.keys(expenseComposition).map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(v: number) => formatBRL(v * 100)}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {hasExpenseBreakdown ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={expenseBreakdown}
+                    dataKey="value"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={3}
+                  >
+                    {expenseBreakdown.map((entry, i) => (
+                      <Cell key={entry.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(v: number) => formatBRL(v * 100)}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                <p className="text-sm font-medium text-slate-600">Sem despesas neste período</p>
+                <p className="max-w-[240px] text-xs leading-5 text-slate-400">Selecione outro mês ou o ano inteiro para consultar a composição.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -486,8 +517,10 @@ export function DashboardPage() {
 
 
 const tooltipStyle = {
-  background: "oklch(0.18 0.02 260)",
-  border: "1px solid oklch(0.32 0.02 260 / 0.6)",
-  borderRadius: 8,
+  background: "#ffffff",
+  color: "#16243a",
+  border: "1px solid #e9eef6",
+  borderRadius: 12,
+  boxShadow: "0 10px 28px rgba(39, 61, 110, 0.1)",
   fontSize: 12,
 };

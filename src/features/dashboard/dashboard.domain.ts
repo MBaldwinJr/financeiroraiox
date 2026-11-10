@@ -238,3 +238,47 @@ export function computePrevious(
     netProfit: snapshot.netProfit,
   };
 }
+
+/**
+ * Informa se há registros para o período/regime selecionado, independentemente
+ * de seu valor monetário (que pode ser zero). Não presume que a falta de
+ * lançamentos significa faturamento zero definitivo.
+ */
+export function hasFinancialActivity(
+  basis: RevenueBasis,
+  month: number | null | undefined,
+  txs: readonly TransactionRow[],
+  paidRevenues: readonly PaidRevenueRow[],
+  paidExpenses: readonly PaidExpenseRow[],
+  salesRows: readonly ErpSaleRow[],
+): boolean {
+  const isWithinPeriod = (date: string | null | undefined): boolean =>
+    !!date && (month == null || Number(date.slice(5, 7)) === month);
+
+  const isResultCategory = (category?: { is_balance_sheet?: boolean | null } | null): boolean =>
+    category?.is_balance_sheet !== true;
+
+  if (basis === "cash") {
+    return (
+      paidRevenues.some((row) => isResultCategory(row.category) && isWithinPeriod(row.paid_at)) ||
+      paidExpenses.some((row) => isResultCategory(row.category) && isWithinPeriod(row.paid_at))
+    );
+  }
+
+  if (basis === "erp_sales") {
+    // A receita vem do ERP; a despesa da mesma consulta gerencial.
+    return (
+      salesRows.some((row) => isWithinPeriod(row.period_start)) ||
+      txs.some(
+        (row) =>
+          row.kind === "expense" &&
+          isResultCategory(row.category) &&
+          isWithinPeriod(row.competencia),
+      )
+    );
+  }
+
+  return txs.some(
+    (row) => isResultCategory(row.category) && isWithinPeriod(row.competencia),
+  );
+}
