@@ -157,7 +157,7 @@ export function DashboardPage() {
       )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Receita Bruta"
           value={kpis.grossRevenue}
           prev={hasPeriodData ? kpis.prev?.revenue : undefined}
@@ -165,15 +165,15 @@ export function DashboardPage() {
           accent="success"
           sparkline={!isMonth && hasPeriodData ? sparkRev : undefined}
         />
-        <KpiCard label="CMV" value={kpis.cmv} icon={ShoppingCart} accent="warning" />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData} label="CMV" value={kpis.cmv} icon={ShoppingCart} accent="warning" />
+        <KpiCard noData={!hasPeriodData}
           label="Lucro Bruto"
           value={kpis.grossProfit}
           icon={PiggyBank}
           accent="info"
           sparkline={!isMonth && hasPeriodData ? sparkProfit : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Total Despesas"
           value={kpis.totalExpenses}
           prev={hasPeriodData ? kpis.prev?.expense : undefined}
@@ -181,19 +181,19 @@ export function DashboardPage() {
           accent="danger"
           sparkline={!isMonth && hasPeriodData ? sparkExp : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label={basis === "cash" ? "Total Recebimentos" : basis === "erp_sales" ? "Vendas ERP" : "Receita no Período"}
           value={kpis.totalRevenue}
           icon={Banknote}
           accent="success"
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Resultado Operacional"
           value={kpis.operatingResult}
           icon={CircleDollarSign}
           accent={kpis.operatingResult >= 0 ? "success" : "danger"}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Lucro Líquido"
           value={kpis.netProfit}
           prev={hasPeriodData ? kpis.prev?.netProfit : undefined}
@@ -201,7 +201,7 @@ export function DashboardPage() {
           accent={kpis.netProfit >= 0 ? "success" : "danger"}
           sparkline={!isMonth && hasPeriodData ? sparkProfit : undefined}
         />
-        <KpiCard
+        <KpiCard noData={!hasPeriodData}
           label="Margem"
           value={kpis.margin}
           icon={Percent}
