@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { financialFiltersSchema } from "@/lib/financial-filters";
+import { financialFiltersSchema, selectFinancialFilters } from "@/lib/financial-filters";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { aggregateByDreLine, buildDreMatrix } from "./dre-engine.domain";
 import { fetchDreRows } from "./dre-engine.repository";
