@@ -4,19 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   applyCashExpenses,
   applyRevenueBasis,
-  bucketPrevYear,
   bucketTransactionsByMonth,
   computeExpenseComposition,
   computeKpis,
   computePrevious,
   selectedMonthIndices,
-  sumPrevYearTotals,
 } from "./dashboard.domain";
 import {
   fetchErpSales,
   fetchPaidExpenses,
   fetchPaidRevenue,
-  fetchPrevYearTransactions,
   fetchYearTransactions,
 } from "./dashboard.repository";
 import { PAYMENT_METHODS, type ErpSaleRow, type PaidExpenseRow, type PaidRevenueRow, type RevenueBasis, type PaymentMethod } from "./dashboard.types";
@@ -66,43 +63,39 @@ export const getFinancials = createServerFn({ method: "POST" })
     const prev = yearWindow(data.year - 1);
     const basis: RevenueBasis = data.basis ?? "accrual";
 
-    const txs = await fetchYearTransactions(context.supabase, {
-      companyId: data.companyId,
-      start,
-      end,
-    });
-    const prevRows = await fetchPrevYearTransactions(context.supabase, {
-      companyId: data.companyId,
-      start: prev.start,
-      end: prev.end,
-    });
-    const basisRows = await loadBasisRows(context.supabase, basis, data.companyId, start, end);
+    const [txs, prevTxs, basisRows, prevBasisRows] = await Promise.all([
+      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end }),
+      fetchYearTransactions(context.supabase, { companyId: data.companyId, start: prev.start, end: prev.end }),
+      loadBasisRows(context.supabase, basis, data.companyId, start, end),
+      loadBasisRows(context.supabase, basis, data.companyId, prev.start, prev.end),
+    ]);
 
-    const { monthly } = bucketTransactionsByMonth(txs);
+    const { monthly, byPayment: accruedPayments } = bucketTransactionsByMonth(txs);
+    const { monthly: previousMonths } = bucketTransactionsByMonth(prevTxs);
     const byPayment = PAYMENT_METHODS.reduce((acc, method) => {
       acc[method] = 0;
       return acc;
     }, {} as Record<PaymentMethod, number>);
     if (basis === "accrual") {
-      const accrued = bucketTransactionsByMonth(txs).byPayment;
-      Object.assign(byPayment, accrued);
+      Object.assign(byPayment, accruedPayments);
     }
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
+    applyRevenueBasis(previousMonths, basis, prevBasisRows.paidRows, prevBasisRows.salesRows);
     if (basis === "cash") {
       applyCashExpenses(monthly, basisRows.paidExpenseRows);
+      applyCashExpenses(previousMonths, prevBasisRows.paidExpenseRows);
       for (const row of basisRows.paidRows) {
-        if (row.paid_at && row.payment_method && PAYMENT_METHODS.includes(row.payment_method as PaymentMethod)) {
+        if (row.paid_at && row.category?.is_balance_sheet !== true && row.payment_method && PAYMENT_METHODS.includes(row.payment_method as PaymentMethod)) {
           byPayment[row.payment_method as PaymentMethod] += row.amount_cents;
         }
       }
     }
 
-    const prevMonthly = bucketPrevYear(prevRows);
-    const prevYearTotal = sumPrevYearTotals(prevRows);
+    const prevMonthly = previousMonths.map(({ revenue, expense }) => ({ revenue, expense }));
 
     const indices = selectedMonthIndices(data.month);
     const kpis = computeKpis(monthly, indices);
-    const previous = computePrevious(data.month, data.year, monthly, prevMonthly, prevYearTotal);
+    const previous = computePrevious(data.month, data.year, monthly, previousMonths);
     const expenseComposition = computeExpenseComposition(monthly, indices);
 
     return {

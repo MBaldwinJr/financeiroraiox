@@ -309,7 +309,7 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Mensal Acumulado (sem CMV)</CardTitle>
+            <CardTitle className="text-sm font-medium">Resultado Gerencial Acumulado (não é saldo bancário)</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">

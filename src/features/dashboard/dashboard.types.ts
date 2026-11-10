@@ -29,6 +29,7 @@ export interface PrevMonthBucket {
 
 export interface TransactionRow {
   date: string;
+  competencia: string;
   amount_cents: number;
   kind: "revenue" | "expense";
   payment_method: string | null;
