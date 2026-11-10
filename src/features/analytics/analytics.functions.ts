@@ -2,8 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
+import { applyFinancialFilters, financialFiltersSchema } from "@/lib/financial-filters";
 
-const Schema = z.object({
+const Schema = financialFiltersSchema.extend({
   companyId: z.string().uuid(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
@@ -20,10 +21,10 @@ type DreGroup =
   | "other";
 
 interface TxAggRow {
-  date: string;
+  competencia: string;
   amount_cents: number;
   kind: "revenue" | "expense";
-  category: { id: string; name: string; dre_group: DreGroup } | null;
+  category: { id: string; name: string; dre_group: DreGroup; is_balance_sheet?: boolean | null } | null;
   cost_center: { id: string; name: string } | null;
   party: { id: string; name: string } | null;
 }
@@ -63,20 +64,22 @@ export const getAnalytics = createServerFn({ method: "POST" })
 
     
     const txs = await fetchAllRows<TxAggRow>((from, to) =>
-      context.supabase
+      applyFinancialFilters(
+        context.supabase
         .from("transactions")
         .select(
-          "date, amount_cents, kind, category:categories(id, name, dre_group), cost_center:cost_centers(id, name), party:parties(id, name)",
+          "competencia, amount_cents, kind, category:categories(id, name, dre_group, is_balance_sheet), cost_center:cost_centers(id, name), party:parties(id, name)",
         )
         .eq("company_id", data.companyId)
         .is("deleted_at", null)
-        .gte("date", yearStart)
-        .lt("date", yearEnd)
-        .range(from, to) as unknown as PromiseLike<{ data: TxAggRow[] | null; error: { message: string } | null }>,
+        .gte("competencia", yearStart)
+        .lt("competencia", yearEnd),
+        data,
+      ).range(from, to) as unknown as PromiseLike<{ data: TxAggRow[] | null; error: { message: string } | null }>,
     );
 
     const inSelected = (tx: TxAggRow) =>
-      !data.month || Number(tx.date.slice(5, 7)) === data.month;
+      !data.month || Number(tx.competencia.slice(5, 7)) === data.month;
 
     // Top expenses by category (selected period)
     const expenseByCategory = new Map<string, number>();
@@ -96,7 +99,8 @@ export const getAnalytics = createServerFn({ method: "POST" })
     }));
 
     for (const tx of txs) {
-      const m = Number(tx.date.slice(5, 7)) - 1;
+      if (tx.category?.is_balance_sheet === true) continue;
+      const m = Number(tx.competencia.slice(5, 7)) - 1;
       const b = monthly[m];
       if (tx.kind === "revenue") {
         b.revenue += tx.amount_cents;
