@@ -1,5 +1,6 @@
 import type { DreMatrix } from "@/features/dre/dre-engine/dre-engine.types";
-import type { Kpis, TransactionRow } from "@/features/dashboard/dashboard.domain";
+import type { Kpis } from "@/features/dashboard/dashboard.domain";
+import type { TransactionRow } from "@/features/dashboard/dashboard.types";
 
 /**
  * Snapshot de conciliação informativo, sem escrita.
