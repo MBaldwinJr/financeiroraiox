@@ -23,7 +23,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
       - name: Test financial domain
         run: npm run test:domain
       - name: Check TypeScript
