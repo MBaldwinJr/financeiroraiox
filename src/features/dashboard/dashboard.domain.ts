@@ -51,6 +51,41 @@ export function bucketTransactionsByMonth(txs: readonly TransactionRow[]): Bucke
   return { monthly, byPayment };
 }
 
+/** Distribuição de receitas por pagamento na MESMA janela escolhida para os KPIs. */
+export function paymentBreakdownForPeriod(
+  basis: RevenueBasis,
+  month: number | null | undefined,
+  txs: readonly TransactionRow[],
+  paidRows: readonly PaidRevenueRow[],
+): Record<PaymentMethod, number> {
+  const totals = PAYMENT_METHODS.reduce((acc, method) => {
+    acc[method] = 0;
+    return acc;
+  }, {} as Record<PaymentMethod, number>);
+  const sameMonth = (date: string | null | undefined) =>
+    !!date && (month == null || monthIndex(date) === month - 1);
+
+  if (basis === "erp_sales") return totals;
+
+  if (basis === "cash") {
+    for (const row of paidRows) {
+      if (row.category?.is_balance_sheet === true || !sameMonth(row.paid_at)) continue;
+      if (isPaymentMethod(row.payment_method)) {
+        totals[row.payment_method] += row.amount_cents;
+      }
+    }
+    return totals;
+  }
+
+  for (const tx of txs) {
+    if (tx.kind !== "revenue" || tx.category?.is_balance_sheet === true || !sameMonth(tx.competencia)) continue;
+    if (isPaymentMethod(tx.payment_method)) {
+      totals[tx.payment_method] += tx.amount_cents;
+    }
+  }
+  return totals;
+}
+
 export function applyRevenueBasis(
   monthly: MonthBucket[],
   basis: RevenueBasis,
