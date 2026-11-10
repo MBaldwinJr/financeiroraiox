@@ -148,3 +148,67 @@
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+
+/* Financeiro Raio-X 2.0 — primeira camada visual clara.
+ * Intencionalmente isolada no Dashboard; outros módulos mantêm o tema atual.
+ * Não altera cálculos, dados, filtros ou autenticação.
+ */
+.dashboard-premium {
+  --foreground: #16243a;
+  --card: #ffffff;
+  --card-foreground: #16243a;
+  --muted: #eff4fa;
+  --muted-foreground: #718096;
+  --secondary: #eff4fa;
+  --secondary-foreground: #243852;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+  --success: #16a34a;
+  --destructive: #e5484d;
+  --warning: #c78212;
+  --info: #2563eb;
+  --border: #e9eef6;
+  --input: #e9eef6;
+  --ring: #2563eb;
+  --gradient-surface: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+  --shadow-elegant: 0 10px 28px rgba(39, 61, 110, 0.06);
+  --shadow-glow: 0 10px 28px rgba(39, 61, 110, 0.06);
+  color: #16243a;
+}
+
+.dashboard-premium .glass-card {
+  border: 1px solid #e9eef6;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(39, 61, 110, 0.06);
+  backdrop-filter: none;
+}
+
+.dashboard-premium .glass-card:hover {
+  box-shadow: 0 14px 36px rgba(39, 61, 110, 0.09);
+}
+
+.dashboard-premium .recharts-cartesian-grid line {
+  stroke: #e8eef8;
+}
+
+.dashboard-premium .recharts-text {
+  fill: #718096;
+}
+
+.dashboard-premium .recharts-legend-item-text {
+  color: #64748b !important;
+}
+
+.dashboard-premium .recharts-default-tooltip {
+  box-shadow: 0 8px 24px rgba(39, 61, 110, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-premium .glass-card {
+    transition: none;
+  }
+}
