@@ -69,7 +69,7 @@ export const getFinancials = createServerFn({ method: "POST" })
     }
 
     const [txs, prevTxs, basisRows, prevBasisRows] = await Promise.all([
-      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end, ...data }),
+      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end, ...selectFinancialFilters(data) }),
       fetchYearTransactions(context.supabase, { companyId: data.companyId, start: prev.start, end: prev.end, ...data }),
       loadBasisRows(context.supabase, basis, data.companyId, start, end, data),
       loadBasisRows(context.supabase, basis, data.companyId, prev.start, prev.end, data),
