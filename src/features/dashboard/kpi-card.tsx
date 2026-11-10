@@ -13,6 +13,7 @@ interface KpiCardProps {
   accent?: "success" | "danger" | "info" | "warning" | "muted";
   format?: "currency" | "percent";
   sparkline?: number[];
+  noData?: boolean;
 }
 
 const accentMap: Record<NonNullable<KpiCardProps["accent"]>, string> = {
@@ -31,6 +32,7 @@ export function KpiCard({
   accent = "info",
   format = "currency",
   sparkline,
+  noData = false,
 }: KpiCardProps) {
   const variation =
     prev != null && prev !== 0 ? (value - prev) / Math.abs(prev) : prev === 0 && value > 0 ? 1 : 0;
@@ -38,7 +40,7 @@ export function KpiCard({
   const down = variation < 0;
   const TrendIcon = up ? ArrowUp : down ? ArrowDown : Minus;
   const trendColor = up ? "text-success" : down ? "text-destructive" : "text-muted-foreground";
-  const displayValue = format === "currency" ? formatBRL(value) : formatPct(value);
+  const displayValue = noData ? "—" : format === "currency" ? formatBRL(value) : formatPct(value);
 
   return (
     <motion.div
@@ -51,24 +53,25 @@ export function KpiCard({
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">{label}</p>
-              <p className={cn("mt-1 text-2xl font-bold tracking-tight numeric", accentMap[accent])}>
+              <p className={cn("mt-1 text-2xl font-bold tracking-tight numeric", noData ? "text-muted-foreground" : accentMap[accent])}>
                 {displayValue}
               </p>
+              {noData && <p className="mt-1 text-[11px] font-normal text-muted-foreground">Sem registros no período</p>}
             </div>
-            <div className={cn("rounded-lg bg-secondary p-2", accentMap[accent])}>
+            <div className={cn("rounded-lg bg-secondary p-2", noData ? "text-muted-foreground" : accentMap[accent])}>
               <Icon className="h-4 w-4" />
             </div>
           </div>
 
           <div className="mt-3 flex items-end justify-between gap-2">
-            {prev != null && (
+            {!noData && prev != null && (
               <div className={cn("flex items-center gap-1 text-xs numeric", trendColor)}>
                 <TrendIcon className="h-3 w-3" />
                 <span>{formatPct(variation)}</span>
                 <span className="text-muted-foreground">vs anterior</span>
               </div>
             )}
-            {sparkline && sparkline.length > 1 && (
+            {!noData && sparkline && sparkline.length > 1 && (
               <div className="h-8 w-24 flex-1">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={sparkline.map((v) => ({ v }))}>
