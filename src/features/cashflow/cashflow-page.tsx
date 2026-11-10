@@ -4,6 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContai
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,16 +15,19 @@ import { formatBRL, formatBRLCompact, fromCents, MONTH_LABELS } from "@/lib/mone
 export function CashflowPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
   const fetcher = useServerFn(getFinancials);
-  const { data, isLoading } = useQuery({
-    queryKey: ["financials", companyId, range.year, "cash"],
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["financials", companyId, range.year, null, "cash", filterKey],
     queryFn: () =>
-      fetcher({ data: { companyId: companyId!, year: range.year, month: null, basis: "cash" } }),
+      fetcher({ data: { companyId: companyId!, year: range.year, month: null, basis: "cash", ...filters } }),
     enabled: !!companyId,
   });
 
   if (!companyId)
     return <p className="text-sm text-muted-foreground">Selecione uma empresa para começar.</p>;
+  if (isError) return <p role="alert" className="text-sm text-destructive">Erro nos lançamentos de caixa: {error.message}</p>;
   if (isLoading || !data)
     return <p className="text-sm text-muted-foreground">Carregando fluxo de caixa…</p>;
 

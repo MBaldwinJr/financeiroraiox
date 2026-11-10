@@ -30,6 +30,7 @@ import {
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
 import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
@@ -74,20 +75,23 @@ export function DashboardPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
   const basis = useFilterStore((s) => s.revenueBasis);
+  const filterState = useFilterStore();
+  const filters = selectFinancialFilters(filterState);
+  const filterKey = financialFiltersKey(filters);
   const fetcher = useServerFn(getFinancials);
 
   const query = useQuery({
-    queryKey: ["financials", companyId, range.year, range.month, basis],
+    queryKey: ["financials", companyId, range.year, range.month, basis, filterKey],
     queryFn: () =>
-      fetcher({ data: { companyId: companyId!, year: range.year, month: range.month, basis } }),
+      fetcher({ data: { companyId: companyId!, year: range.year, month: range.month, basis, ...filters } }),
     enabled: !!companyId,
   });
 
   const analyticsFetcher = useServerFn(getAnalytics);
   const analyticsQuery = useQuery({
-    queryKey: ["analytics", companyId, range.year, range.month],
+    queryKey: ["analytics", companyId, range.year, range.month, filterKey],
     queryFn: () =>
-      analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month } }),
+      analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month, ...filters } }),
     enabled: !!companyId,
   });
 
@@ -99,6 +103,10 @@ export function DashboardPage() {
     );
   }
 
+
+  if (query.isError) {
+    return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">Falha ao carregar indicadores: {query.error.message}</div>;
+  }
 
   if (query.isLoading || !query.data) {
     return <div className="text-sm text-muted-foreground">Carregando dados financeiros…</div>;

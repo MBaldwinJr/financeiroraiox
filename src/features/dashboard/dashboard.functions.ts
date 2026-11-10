@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { financialFiltersSchema, hasFinancialFilters, selectFinancialFilters, type FinancialFilters } from "@/lib/financial-filters";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   applyCashExpenses,
@@ -18,7 +19,7 @@ import {
 } from "./dashboard.repository";
 import { PAYMENT_METHODS, type ErpSaleRow, type PaidExpenseRow, type PaidRevenueRow, type RevenueBasis, type PaymentMethod } from "./dashboard.types";
 
-const Schema = z.object({
+const Schema = financialFiltersSchema.extend({
   companyId: z.string().uuid(),
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
@@ -36,6 +37,7 @@ async function loadBasisRows(
   companyId: string,
   start: string,
   end: string,
+  filters: FinancialFilters,
 ): Promise<{
   paidRows: PaidRevenueRow[];
   salesRows: ErpSaleRow[];
@@ -43,8 +45,8 @@ async function loadBasisRows(
 }> {
   if (basis === "cash") {
     const [paidRows, paidExpenseRows] = await Promise.all([
-      fetchPaidRevenue(supabase, { companyId, start, end }),
-      fetchPaidExpenses(supabase, { companyId, start, end }),
+      fetchPaidRevenue(supabase, { companyId, start, end, ...filters }),
+      fetchPaidExpenses(supabase, { companyId, start, end, ...filters }),
     ]);
     return { paidRows, salesRows: [], paidExpenseRows };
   }
@@ -62,12 +64,15 @@ export const getFinancials = createServerFn({ method: "POST" })
     const { start, end } = yearWindow(data.year);
     const prev = yearWindow(data.year - 1);
     const basis: RevenueBasis = data.basis ?? "accrual";
+    if (basis === "erp_sales" && hasFinancialFilters(data)) {
+      throw new Error("Os filtros por lançamento não são compatíveis com a receita consolidada de vendas ERP. Limpe os filtros ou selecione competência/caixa.");
+    }
 
     const [txs, prevTxs, basisRows, prevBasisRows] = await Promise.all([
-      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end }),
-      fetchYearTransactions(context.supabase, { companyId: data.companyId, start: prev.start, end: prev.end }),
-      loadBasisRows(context.supabase, basis, data.companyId, start, end),
-      loadBasisRows(context.supabase, basis, data.companyId, prev.start, prev.end),
+      fetchYearTransactions(context.supabase, { companyId: data.companyId, start, end, ...selectFinancialFilters(data) }),
+      fetchYearTransactions(context.supabase, { companyId: data.companyId, start: prev.start, end: prev.end, ...selectFinancialFilters(data) }),
+      loadBasisRows(context.supabase, basis, data.companyId, start, end, data),
+      loadBasisRows(context.supabase, basis, data.companyId, prev.start, prev.end, data),
     ]);
 
     const { monthly, byPayment: accruedPayments } = bucketTransactionsByMonth(txs);

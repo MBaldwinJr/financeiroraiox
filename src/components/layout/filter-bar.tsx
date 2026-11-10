@@ -11,10 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { listBankAccounts, listCategories, listCostCenters } from "@/features/catalog/catalog.functions";
+import { listBankAccounts, listCategories, listCostCenters, listParties } from "@/features/catalog/catalog.functions";
 import { MONTH_LABELS } from "@/lib/money";
 import { RevenueBasisToggle } from "@/components/layout/revenue-basis-toggle";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 
 const YEARS = (() => {
   const y = new Date().getFullYear();
@@ -23,12 +24,13 @@ const YEARS = (() => {
 
 export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: boolean }) {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
-  const { range, setRange, clear, categoryIds, costCenterIds, bankAccountIds, paymentMethods, setMulti } =
+  const { range, setRange, clear, categoryIds, costCenterIds, bankAccountIds, partyIds, paymentMethods, setMulti } =
     useFilterStore();
 
   const fCats = useServerFn(listCategories);
   const fCcs = useServerFn(listCostCenters);
   const fBas = useServerFn(listBankAccounts);
+  const fParties = useServerFn(listParties);
   const cats = useQuery({
     queryKey: ["categories", companyId],
     queryFn: () => fCats({ data: { companyId: companyId! } }),
@@ -45,8 +47,14 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
     enabled: !!companyId,
   });
 
+  const parties = useQuery({
+    queryKey: ["parties", companyId],
+    queryFn: () => fParties({ data: { companyId: companyId! } }),
+    enabled: !!companyId,
+  });
+
   const hasFilters =
-    categoryIds.length + costCenterIds.length + bankAccountIds.length + paymentMethods.length > 0;
+    categoryIds.length + costCenterIds.length + bankAccountIds.length + partyIds.length + paymentMethods.length > 0;
 
   return (
     <Card className="glass-card flex flex-wrap items-center gap-3 p-3">
@@ -101,6 +109,12 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
         onChange={(ids) => setMulti("bankAccountIds", ids)}
       />
       <MultiPickerCompact
+        label="Cliente/Fornecedor"
+        options={(parties.data ?? []).map((p) => ({ id: p.id, name: p.name }))}
+        value={partyIds}
+        onChange={(ids) => setMulti("partyIds", ids)}
+      />
+      <MultiPickerCompact
         label="Pagamento"
         options={[
           { id: "cash", name: "Dinheiro" },
@@ -125,6 +139,7 @@ export function FilterBar({ showRevenueBasis = true }: { showRevenueBasis?: bool
   );
 }
 
+/** Seleção múltipla real; permite ver e remover filtros sem perder os anteriores. */
 function MultiPickerCompact({
   label,
   options,
@@ -136,28 +151,47 @@ function MultiPickerCompact({
   value: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const selectedLabel =
+    value.length === 0
+      ? label
+      : value.length === 1
+        ? (options.find((o) => o.id === value[0])?.name ?? label)
+        : `${label}: ${value.length}`;
+
   return (
-    <Select
-      value={value[0] ?? "all"}
-      onValueChange={(v) => (v === "all" ? onChange([]) : onChange([v]))}
-    >
-      <SelectTrigger className="w-[160px]">
-        <SelectValue placeholder={label}>
-          {value.length === 0
-            ? label
-            : value.length === 1
-              ? options.find((o) => o.id === value[0])?.name
-              : `${value.length} selecionados`}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">Todos — {label}</SelectItem>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-[170px] justify-between gap-2"
+          aria-label={`${label} — ${value.length ? `${value.length} selecionado(s)` : "Todos"}`}
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+        <DropdownMenuCheckboxItem
+          checked={value.length === 0}
+          onCheckedChange={() => onChange([])}
+          onSelect={(e) => e.preventDefault()}
+        >
+          Todos — {label}
+        </DropdownMenuCheckboxItem>
         {options.map((o) => (
-          <SelectItem key={o.id} value={o.id}>
+          <DropdownMenuCheckboxItem
+            key={o.id}
+            checked={value.includes(o.id)}
+            onCheckedChange={(checked) =>
+              onChange(checked ? [...value, o.id] : value.filter((id) => id !== o.id))
+            }
+            onSelect={(e) => e.preventDefault()}
+          >
             {o.name}
-          </SelectItem>
+          </DropdownMenuCheckboxItem>
         ))}
-      </SelectContent>
-    </Select>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

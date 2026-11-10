@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getDreMatrix } from "@/features/dre/dre-engine/dre-engine.functions";
 import { STORED_DRE_LINES, type StoredDreLine } from "@/features/dre/dre-line.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
@@ -45,10 +46,12 @@ const LINES: LineDef[] = [
 export function DrePage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
   const fetcher = useServerFn(getDreMatrix);
   const query = useQuery({
-    queryKey: ["dre-matrix", companyId, range.year],
-    queryFn: () => fetcher({ data: { companyId: companyId!, year: range.year } }),
+    queryKey: ["dre-matrix", companyId, range.year, filterKey],
+    queryFn: () => fetcher({ data: { companyId: companyId!, year: range.year, ...filters } }),
     enabled: !!companyId,
   });
 

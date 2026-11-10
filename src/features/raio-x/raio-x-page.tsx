@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +15,13 @@ import { cn } from "@/lib/utils";
 export function RaioXPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const range = useFilterStore((s) => s.range);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
   const fetcher = useServerFn(getAnalytics);
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics", companyId, range.year, range.month],
+    queryKey: ["analytics", companyId, range.year, range.month, filterKey],
     queryFn: () =>
-      fetcher({ data: { companyId: companyId!, year: range.year, month: range.month } }),
+      fetcher({ data: { companyId: companyId!, year: range.year, month: range.month, ...filters } }),
     enabled: !!companyId,
   });
 

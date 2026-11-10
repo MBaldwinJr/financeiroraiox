@@ -1,4 +1,5 @@
 import { fetchAllRows } from "@/lib/supabase-paginate";
+import { applyFinancialFilters, type FinancialFilters } from "@/lib/financial-filters";
 import type {
   ErpSaleRow,
   PaidExpenseRow,
@@ -14,7 +15,7 @@ type SupabaseClient = any;
 
 type PaginatedQuery<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
 
-interface DateWindow {
+interface DateWindow extends FinancialFilters {
   companyId: string;
   start: string;
   end: string;
@@ -22,43 +23,48 @@ interface DateWindow {
 
 export function fetchYearTransactions(
   supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
+  { companyId, start, end, ...filters }: DateWindow,
 ): Promise<TransactionRow[]> {
   // Exclui contas patrimoniais (Fornecedores, Empréstimos, Imobilizado) da DRE.
   return fetchAllRows<TransactionRow>((from, to) =>
-    supabase
+    applyFinancialFilters(
+      supabase
       .from("transactions")
       .select("date, competencia, amount_cents, kind, payment_method, category:categories(dre_group, is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("competencia", start)
-      .lt("competencia", end)
-      .range(from, to) as PaginatedQuery<TransactionRow>,
+      .lt("competencia", end),
+      filters,
+    ).range(from, to) as PaginatedQuery<TransactionRow>,
   );
 }
 
 export function fetchPrevYearTransactions(
   supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
+  { companyId, start, end, ...filters }: DateWindow,
 ): Promise<PrevTransactionRow[]> {
   return fetchAllRows<PrevTransactionRow>((from, to) =>
-    supabase
+    applyFinancialFilters(
+      supabase
       .from("transactions")
       .select("date, amount_cents, kind, category:categories(is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("date", start)
-      .lt("date", end)
-      .range(from, to) as PaginatedQuery<PrevTransactionRow>,
+      .lt("date", end),
+      filters,
+    ).range(from, to) as PaginatedQuery<PrevTransactionRow>,
   );
 }
 
 export function fetchPaidRevenue(
   supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
+  { companyId, start, end, ...filters }: DateWindow,
 ): Promise<PaidRevenueRow[]> {
   return fetchAllRows<PaidRevenueRow>((from, to) =>
-    supabase
+    applyFinancialFilters(
+      supabase
       .from("transactions")
       .select("paid_at, amount_cents, payment_method, category:categories(is_balance_sheet)")
       .eq("company_id", companyId)
@@ -66,17 +72,19 @@ export function fetchPaidRevenue(
       .eq("status", "paid")
       .is("deleted_at", null)
       .gte("paid_at", start)
-      .lt("paid_at", end)
-      .range(from, to) as PaginatedQuery<PaidRevenueRow>,
+      .lt("paid_at", end),
+      filters,
+    ).range(from, to) as PaginatedQuery<PaidRevenueRow>,
   );
 }
 
 export function fetchPaidExpenses(
   supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
+  { companyId, start, end, ...filters }: DateWindow,
 ): Promise<PaidExpenseRow[]> {
   return fetchAllRows<PaidExpenseRow>((from, to) =>
-    supabase
+    applyFinancialFilters(
+      supabase
       .from("transactions")
       .select("paid_at, amount_cents, category:categories(dre_group, is_balance_sheet)")
       .eq("company_id", companyId)
@@ -84,14 +92,15 @@ export function fetchPaidExpenses(
       .eq("status", "paid")
       .is("deleted_at", null)
       .gte("paid_at", start)
-      .lt("paid_at", end)
-      .range(from, to) as PaginatedQuery<PaidExpenseRow>,
+      .lt("paid_at", end),
+      filters,
+    ).range(from, to) as PaginatedQuery<PaidExpenseRow>,
   );
 }
 
 export function fetchErpSales(
   supabase: SupabaseClient,
-  { companyId, start, end }: DateWindow,
+  { companyId, start, end, ...filters }: DateWindow,
 ): Promise<ErpSaleRow[]> {
   return fetchAllRows<ErpSaleRow>((from, to) =>
     supabase
