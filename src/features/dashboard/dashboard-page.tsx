@@ -61,9 +61,9 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 const CHART_COLORS = [
-  "oklch(0.72 0.17 156)",
-  "oklch(0.65 0.23 22)",
-  "oklch(0.65 0.18 256)",
+  "#2563eb",
+  "#06b6d4",
+  "#4f46e5",
   "oklch(0.78 0.16 75)",
   "oklch(0.68 0.2 310)",
   "oklch(0.6 0.18 200)",
@@ -113,17 +113,17 @@ export function DashboardPage() {
   const sparkProfit = monthly.map((m) => fromCents(m.revenue - m.expense));
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-premium min-h-[calc(100vh-8rem)] space-y-6 rounded-[28px] bg-[#f5f8fe] p-4 text-[#16243a] shadow-sm sm:p-6 lg:p-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
-          <p className="text-sm text-muted-foreground">Resumo financeiro — {periodLabel}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#16243a] sm:text-3xl">Visão Financeira</h1>
+          <p className="mt-1 text-sm text-slate-500">Indicadores e tendências do negócio · {periodLabel}</p>
         </div>
       </header>
 
       <FilterBar />
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Receita Bruta"
           value={kpis.grossRevenue}
@@ -191,10 +191,10 @@ export function DashboardPage() {
                   Despesa: fromCents(m.expense - m.cmv),
                 }))}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.02 260 / 0.4)" />
-                <XAxis dataKey="month" stroke="oklch(0.7 0.02 255)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef8" />
+                <XAxis dataKey="month" stroke="#718096" fontSize={11} />
                 <YAxis
-                  stroke="oklch(0.7 0.02 255)"
+                  stroke="#718096"
                   fontSize={11}
                   tickFormatter={(v) => formatBRLCompact(v * 100)}
                 />
@@ -203,8 +203,8 @@ export function DashboardPage() {
                   formatter={(v: number) => formatBRL(v * 100)}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Receita" fill="oklch(0.72 0.17 156)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Despesa" fill="oklch(0.65 0.23 22)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Receita" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Despesa" fill="#06b6d4" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -254,10 +254,10 @@ export function DashboardPage() {
                   Lucro: fromCents(m.revenue - m.expense),
                 }))}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.02 260 / 0.4)" />
-                <XAxis dataKey="month" stroke="oklch(0.7 0.02 255)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef8" />
+                <XAxis dataKey="month" stroke="#718096" fontSize={11} />
                 <YAxis
-                  stroke="oklch(0.7 0.02 255)"
+                  stroke="#718096"
                   fontSize={11}
                   tickFormatter={(v) => formatBRLCompact(v * 100)}
                 />
@@ -268,7 +268,7 @@ export function DashboardPage() {
                 <Line
                   type="monotone"
                   dataKey="Lucro"
-                  stroke="oklch(0.65 0.18 256)"
+                  stroke="#4f46e5"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                 />
@@ -325,14 +325,14 @@ export function DashboardPage() {
               >
                 <defs>
                   <linearGradient id="flow" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.72 0.17 156)" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="oklch(0.72 0.17 156)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.6} />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.02 260 / 0.4)" />
-                <XAxis dataKey="month" stroke="oklch(0.7 0.02 255)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef8" />
+                <XAxis dataKey="month" stroke="#718096" fontSize={11} />
                 <YAxis
-                  stroke="oklch(0.7 0.02 255)"
+                  stroke="#718096"
                   fontSize={11}
                   tickFormatter={(v) => formatBRLCompact(v * 100)}
                 />
@@ -343,7 +343,7 @@ export function DashboardPage() {
                 <Area
                   type="monotone"
                   dataKey="saldo"
-                  stroke="oklch(0.72 0.17 156)"
+                  stroke="#2563eb"
                   fill="url(#flow)"
                   strokeWidth={2}
                 />
@@ -367,10 +367,10 @@ export function DashboardPage() {
                   [`Receita ${range.year}`]: fromCents(m.revenue),
                 }))}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.02 260 / 0.4)" />
-                <XAxis dataKey="month" stroke="oklch(0.7 0.02 255)" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eef8" />
+                <XAxis dataKey="month" stroke="#718096" fontSize={11} />
                 <YAxis
-                  stroke="oklch(0.7 0.02 255)"
+                  stroke="#718096"
                   fontSize={11}
                   tickFormatter={(v) => formatBRLCompact(v * 100)}
                 />
@@ -381,12 +381,12 @@ export function DashboardPage() {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar
                   dataKey={`Receita ${range.year - 1}`}
-                  fill="oklch(0.45 0.05 260)"
+                  fill="#cbd5e1"
                   radius={[4, 4, 0, 0]}
                 />
                 <Bar
                   dataKey={`Receita ${range.year}`}
-                  fill="oklch(0.65 0.18 256)"
+                  fill="#4f46e5"
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>
