@@ -56,7 +56,7 @@ export function CashflowPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">Fluxo de Caixa — {range.year}</h1>
         <p className="text-sm text-muted-foreground">
-          Valores realizados pela data do pagamento. O CMV não compõe as saídas; os gráficos mostram a evolução mensal do ano.
+          Valores liquidados pela data do pagamento. CMV não compõe as saídas nesta visão gerencial. O acumulado parte de zero e não representa saldo bancário conciliado.
         </p>
       </header>
       <FilterBar showRevenueBasis={false} />
@@ -70,7 +70,7 @@ export function CashflowPage() {
           accent="danger"
         />
         <KpiCard
-          label="Saldo do Período"
+          label="Movimento Líquido do Período"
           value={saldo}
           icon={Wallet}
           accent={saldo >= 0 ? "success" : "danger"}
@@ -79,7 +79,7 @@ export function CashflowPage() {
 
       <Card className="glass-card">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Saldo Acumulado</CardTitle>
+          <CardTitle className="text-sm font-medium">Movimento Líquido Acumulado (sem saldo inicial)</CardTitle>
         </CardHeader>
         <CardContent className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -107,7 +107,7 @@ export function CashflowPage() {
                 stroke="oklch(0.72 0.17 156)"
                 fill="url(#acumGreen)"
                 strokeWidth={2}
-                name="Saldo Acumulado"
+                name="Movimento Acumulado"
               />
             </AreaChart>
           </ResponsiveContainer>
