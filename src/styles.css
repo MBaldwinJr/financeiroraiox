@@ -155,7 +155,10 @@
  * Não altera cálculos, dados, filtros ou autenticação.
  */
 .dashboard-premium {
+  --background: #ffffff;
   --foreground: #16243a;
+  --popover: #ffffff;
+  --popover-foreground: #16243a;
   --card: #ffffff;
   --card-foreground: #16243a;
   --muted: #eff4fa;
@@ -164,8 +167,8 @@
   --secondary-foreground: #243852;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --accent: #2563eb;
-  --accent-foreground: #ffffff;
+  --accent: #eaf2ff;
+  --accent-foreground: #1d4ed8;
   --success: #16a34a;
   --destructive: #e5484d;
   --warning: #c78212;
