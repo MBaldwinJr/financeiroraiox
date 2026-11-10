@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -10,6 +11,7 @@ import {
   Percent,
   CircleDollarSign,
   Info,
+  ChevronDown,
 } from "lucide-react";
 import {
   Area,
@@ -33,6 +35,7 @@ import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getFinancials } from "@/features/dashboard/dashboard.functions";
+import { accumulatedNetResult } from "@/features/dashboard/dashboard.domain";
 import { getAnalytics } from "@/features/analytics/analytics.functions";
 import { KpiCard } from "@/features/dashboard/kpi-card";
 import { DreReconciliationCard } from "@/features/dre/reconciliation-card";
@@ -82,6 +85,7 @@ export function DashboardPage() {
   const filterState = useFilterStore();
   const filters = selectFinancialFilters(filterState);
   const filterKey = financialFiltersKey(filters);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const fetcher = useServerFn(getFinancials);
 
   const query = useQuery({
@@ -96,7 +100,7 @@ export function DashboardPage() {
     queryKey: ["analytics", companyId, range.year, range.month, filterKey],
     queryFn: () =>
       analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month, ...filters } }),
-    enabled: !!companyId,
+    enabled: !!companyId && advancedOpen && !!query.data?.periodActivity.hasSelectedPeriodData,
   });
 
   if (!companyId) {
@@ -125,6 +129,11 @@ export function DashboardPage() {
   const sparkRev = monthly.map((m) => fromCents(m.revenue));
   const sparkExp = monthly.map((m) => fromCents(m.expense - m.cmv));
   const sparkProfit = monthly.map((m) => fromCents(m.revenue - m.expense));
+  const sparkGrossProfit = monthly.map((m) => fromCents(m.revenue - m.cmv));
+  const accumulated = accumulatedNetResult(monthly);
+  const paymentBreakdown = Object.entries(byPayment)
+    .filter(([, amount]) => amount > 0)
+    .map(([method, amount]) => ({ name: PAYMENT_LABELS[method] ?? method, value: fromCents(amount) }));
   const expenseBreakdown = Object.entries(expenseComposition)
     .filter(([, value]) => value > 0)
     .map(([key, value]) => ({ name: EXPENSE_LABELS[key] ?? key, value: fromCents(value) }));
@@ -157,8 +166,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {basis === "accrual" && <DreReconciliationCard />}
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard noData={!hasPeriodData}
           label="Receita Bruta"
@@ -170,11 +177,11 @@ export function DashboardPage() {
         />
         <KpiCard noData={!hasPeriodData} label="CMV" value={kpis.cmv} icon={ShoppingCart} accent="warning" />
         <KpiCard noData={!hasPeriodData}
-          label="Lucro Bruto"
+          label="Lucro Bruto (gerencial)"
           value={kpis.grossProfit}
           icon={PiggyBank}
           accent="info"
-          sparkline={!isMonth && hasPeriodData ? sparkProfit : undefined}
+          sparkline={!isMonth && hasPeriodData ? sparkGrossProfit : undefined}
         />
         <KpiCard noData={!hasPeriodData}
           label="Total Despesas"
@@ -197,7 +204,7 @@ export function DashboardPage() {
           accent={kpis.operatingResult >= 0 ? "success" : "danger"}
         />
         <KpiCard noData={!hasPeriodData}
-          label="Lucro Líquido"
+          label="Lucro Líquido (gerencial)"
           value={kpis.netProfit}
           prev={hasPeriodData ? kpis.prev?.netProfit : undefined}
           icon={Receipt}
@@ -213,10 +220,12 @@ export function DashboardPage() {
         />
       </section>
 
+      {basis === "accrual" && hasPeriodData && <DreReconciliationCard />}
+
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="glass-card lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Receita x Despesa — evolução anual de {range.year}</CardTitle>
+            <CardTitle className="text-sm font-medium">Receita x Despesas sem CMV — {range.year}</CardTitle>
             {isMonth && <p className="mt-1 text-xs text-slate-500">Visão de janeiro a dezembro · indicadores acima: {periodLabel}</p>}
           </CardHeader>
           <CardContent className="h-72">
@@ -249,7 +258,7 @@ export function DashboardPage() {
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Composição de Despesas — {periodLabel}</CardTitle>
+            <CardTitle className="text-sm font-medium">Composição de custos e despesas — {periodLabel}</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             {hasExpenseBreakdown ? (
@@ -286,7 +295,7 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="glass-card lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
+            <CardTitle className="text-sm font-medium">Evolução do resultado gerencial</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -351,19 +360,15 @@ export function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="glass-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Resultado Gerencial Acumulado (não é saldo bancário)</CardTitle>
+            <CardTitle className="text-sm font-medium">Resultado líquido gerencial acumulado (não é saldo bancário)</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={monthly.reduce<{ month: string; saldo: number }[]>((acc, m, i) => {
-                  const prev = acc[i - 1]?.saldo ?? 0;
-                  acc.push({
-                    month: MONTH_LABELS[i],
-                    saldo: prev + fromCents(m.revenue - (m.expense - m.cmv)),
-                  });
-                  return acc;
-                }, [])}
+                data={accumulated.map((value, i) => ({
+                  month: MONTH_LABELS[i],
+                  saldo: fromCents(value),
+                }))}
               >
                 <defs>
                   <linearGradient id="flow" x1="0" y1="0" x2="0" y2="1">
