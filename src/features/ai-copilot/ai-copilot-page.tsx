@@ -74,7 +74,7 @@ export function AiCopilotPage() {
   function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || !companyId || mutation.isPending) return;
-    const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }].slice(-20);
+    const next: ChatMessage[] = [...messages, { role: "user" as const, content: trimmed }].slice(-20);
     setMessages(next);
     setInput("");
     mutation.mutate({ scope: scopeKey, items: next });
