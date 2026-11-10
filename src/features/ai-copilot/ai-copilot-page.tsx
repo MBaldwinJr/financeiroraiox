@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
+import { MONTH_LABELS } from "@/lib/money";
 import { askFinanceAI } from "@/features/ai-copilot/ai-copilot.functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,29 +20,52 @@ interface ChatMessage {
 }
 
 const SUGGESTIONS = [
-  "Por que meu lucro caiu em março?",
-  "Qual categoria mais cresceu?",
-  "Quanto gastei com Marketing no trimestre?",
-  "Qual foi meu melhor mês?",
-  "Quais despesas posso reduzir?",
+  "Qual é a diferença entre o lucro gerencial e a DRE?",
+  "Quais classificações contábeis precisam de revisão?",
+  "Como evoluíram receitas e CMV no período?",
+  "Quais categorias tiveram maiores despesas, sem CMV?",
+  "Que dados estão faltando para analisar o resultado?",
 ];
 
 export function AiCopilotPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
-  const year = useFilterStore((s) => s.range.year);
+  const range = useFilterStore((s) => s.range);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
+  const scopeKey = JSON.stringify([companyId, range.year, range.month, filterKey]);
+  const activeScope = useRef(scopeKey);
+  activeScope.current = scopeKey;
   const ask = useServerFn(askFinanceAI);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const mutation = useMutation({
-    mutationFn: (newMessages: ChatMessage[]) =>
-      ask({ data: { companyId: companyId!, year, messages: newMessages } }),
-    onSuccess: ({ content }) => {
+    mutationFn: (request: { scope: string; items: ChatMessage[] }) =>
+      ask({
+        data: {
+          companyId: companyId!,
+          year: range.year,
+          month: range.month,
+          ...filters,
+          messages: request.items,
+        },
+      }),
+    onSuccess: ({ content }, request) => {
+      if (request.scope !== activeScope.current) return;
       setMessages((prev) => [...prev, { role: "assistant", content }]);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro na IA"),
+    onError: (error, request) => {
+      if (request.scope !== activeScope.current) return;
+      toast.error(error instanceof Error ? error.message : "Erro na IA");
+    },
   });
+
+  // Nunca reaproveitar mensagens ou respostas assíncronas de outra empresa, período ou filtro.
+  useEffect(() => {
+    setMessages([]);
+    setInput("");
+  }, [scopeKey]);
 
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
@@ -49,10 +74,10 @@ export function AiCopilotPage() {
   function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || !companyId || mutation.isPending) return;
-    const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
+    const next: ChatMessage[] = [...messages, { role: "user" as const, content: trimmed }].slice(-20);
     setMessages(next);
     setInput("");
-    mutation.mutate(next);
+    mutation.mutate({ scope: scopeKey, items: next });
   }
 
   if (!companyId)
@@ -65,7 +90,12 @@ export function AiCopilotPage() {
           <Sparkles className="h-6 w-6 text-primary" /> IA Financeira
         </h1>
         <p className="text-sm text-muted-foreground">
-          Copiloto que analisa sua DRE de {year} e responde perguntas em linguagem natural.
+          Copiloto que interpreta DRE e resultado gerencial de {range.month ? `${MONTH_LABELS[range.month - 1]}/${range.year}` : range.year}.
+        </p>
+        <p className="mt-2 inline-flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border border-border px-3 py-1">Base: competência (DRE)</span>
+          <span className="rounded-full border border-border px-3 py-1">{Object.values(filters).some((value) => value?.length) ? "Filtros globais ativos" : "Sem filtros adicionais"}</span>
+          <span className="rounded-full border border-border px-3 py-1">Dados não homologados contabilmente</span>
         </p>
       </header>
 

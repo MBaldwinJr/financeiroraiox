@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
 import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
+import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -47,6 +48,7 @@ export interface DreAuditSummary {
   totalTransactions: number;
   totalIssues: number;
   byReason: Record<DreAuditIssue["reason"], number>;
+  unmappedGroups: ClassificationGap[];
   issues: DreAuditIssue[];
 }
 
@@ -56,18 +58,34 @@ export const getDreAudit = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<DreAuditSummary> => {
     const start = `${data.year}-01-01`;
     const end = `${data.year + 1}-01-01`;
-    const rows = await fetchAllRows<TxRow>((from, to) =>
-      context.supabase
-        .from("transactions")
-        .select(
-          "id, date, competencia, description, amount_cents, kind, fingerprint, category:categories(id, name, is_balance_sheet, dre_line, account_class)",
-        )
-        .eq("company_id", data.companyId)
-        .is("deleted_at", null)
-        .gte("date", start)
-        .lt("date", end)
-        .range(from, to),
-    );
+    const selectColumns =
+      "id, date, competencia, description, amount_cents, kind, fingerprint, category:categories(id, name, is_balance_sheet, dre_line, account_class)";
+    // A DRE usa competência. Incluir também os registros sem competência pelo
+    // ano da data do lançamento, sem duplicar linhas entre as consultas.
+    const [byCompetence, missingCompetence] = await Promise.all([
+      fetchAllRows<TxRow>((from, to) =>
+        context.supabase
+          .from("transactions")
+          .select(selectColumns)
+          .eq("company_id", data.companyId)
+          .is("deleted_at", null)
+          .gte("competencia", start)
+          .lt("competencia", end)
+          .range(from, to),
+      ),
+      fetchAllRows<TxRow>((from, to) =>
+        context.supabase
+          .from("transactions")
+          .select(selectColumns)
+          .eq("company_id", data.companyId)
+          .is("deleted_at", null)
+          .is("competencia", null)
+          .gte("date", start)
+          .lt("date", end)
+          .range(from, to),
+      ),
+    ]);
+    const rows = [...byCompetence, ...missingCompetence];
 
     const issues: DreAuditIssue[] = [];
     const fpCount = new Map<string, number>();
@@ -94,14 +112,14 @@ export const getDreAudit = createServerFn({ method: "POST" })
         push("duplicidade_detectada");
       }
 
+      if (!r.competencia) push("sem_competencia");
       if (!r.category) {
         push("sem_categoria");
         continue;
       }
-      if (!r.competencia) push("sem_competencia");
       if (r.category.is_balance_sheet) {
-        // Conta patrimonial NÃO deveria impactar DRE. Apenas informativo.
-        push("conta_patrimonial_em_dre");
+        // Movimentações patrimoniais são legitimamente excluídas da DRE.
+        // Não marcar toda liquidação de fornecedor como inconsistência.
         continue;
       }
       if (!isStoredDreLine(r.category.dre_line)) push("categoria_sem_dre_line");
@@ -123,10 +141,24 @@ export const getDreAudit = createServerFn({ method: "POST" })
       } as Record<DreAuditIssue["reason"], number>,
     );
 
+    const issuePriority: Record<DreAuditIssue["reason"], number> = {
+      sem_categoria: 0,
+      categoria_sem_dre_line: 1,
+      sem_competencia: 2,
+      duplicidade_detectada: 3,
+      categoria_sem_account_class: 4,
+      conta_patrimonial_em_dre: 5,
+    };
+    issues.sort((a, b) =>
+      issuePriority[a.reason] - issuePriority[b.reason] ||
+      Math.abs(b.amount_cents) - Math.abs(a.amount_cents),
+    );
+
     return {
       totalTransactions: rows.length,
       totalIssues: issues.length,
       byReason,
+      unmappedGroups: summarizeClassificationGaps(rows),
       issues: issues.slice(0, 500),
     };
   });

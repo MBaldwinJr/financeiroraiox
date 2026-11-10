@@ -101,7 +101,8 @@ export function DreAuditPage() {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["dre-audit", companyId, year] });
+    // Alterações explícitas feitas na auditoria afetam DRE, Dashboard, relatórios e IA.
+    void queryClient.invalidateQueries();
     setSelected(new Set());
   };
 
@@ -135,7 +136,7 @@ export function DreAuditPage() {
     mutationFn: (ids: string[]) =>
       deleteBulk({ data: { companyId: companyId!, transactionIds: ids } }),
     onSuccess: (r) => {
-      toast.success(`${r.updated} lançamento(s) excluído(s).`);
+      toast.success(`${r.updated} lançamento(s) marcado(s) como excluído(s).`);
       invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -175,7 +176,7 @@ export function DreAuditPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Auditoria da DRE</h1>
         <p className="text-sm text-muted-foreground">
           Detecta lançamentos que podem distorcer a DRE — sem categoria, sem competência ou contas
-          patrimoniais indevidas.
+          ou categorias fora da classificação contábil. Contas patrimoniais corretamente excluídas não são inconsistências.
         </p>
       </div>
 
@@ -213,7 +214,9 @@ export function DreAuditPage() {
                 <CardTitle className="text-sm text-muted-foreground">Distribuição</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                {(Object.keys(data.byReason) as DreAuditIssue["reason"][]).map((reason) => (
+                {(Object.keys(data.byReason) as DreAuditIssue["reason"][])
+                  .filter((reason) => data.byReason[reason] > 0)
+                  .map((reason) => (
                   <Tooltip key={reason}>
                     <TooltipTrigger asChild>
                       <Badge
@@ -231,6 +234,46 @@ export function DreAuditPage() {
               </CardContent>
             </Card>
           </div>
+
+          {data.unmappedGroups.length > 0 && (
+            <Card>
+              <CardHeader className="space-y-2">
+                <CardTitle className="text-base">Categorias pendentes de enquadramento na DRE</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Total consolidado de todos os lançamentos analisados, não apenas os 500 exemplos abaixo.
+                  Categorias patrimoniais não aparecem nesta lista. Valores não devem ser corrigidos automaticamente.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Linha DRE atual</TableHead>
+                        <TableHead className="text-right">Lançamentos</TableHead>
+                        <TableHead className="text-right">Despesas</TableHead>
+                        <TableHead className="text-right">Receitas</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.unmappedGroups.map((group) => (
+                        <TableRow key={group.categoryId ?? "sem-categoria"}>
+                          <TableCell className="font-medium">{group.categoryName}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {group.dreLine ?? "Sem linha"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{group.count}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatBRL(group.expenseCents)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatBRL(group.revenueCents)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -277,12 +320,12 @@ export function DreAuditPage() {
                   variant="destructive"
                   disabled={selectedIds.length === 0 || deleteMut.isPending}
                   onClick={() => {
-                    if (confirm(`Deseja excluir definitivamente os ${selectedIds.length} lançamentos selecionados?`)) {
+                    if (confirm(`Deseja marcar como excluídos os ${selectedIds.length} lançamentos selecionados? Os registros não serão apagados fisicamente.`)) {
                       deleteMut.mutate(selectedIds);
                     }
                   }}
                 >
-                  Excluir Selecionados
+                  Marcar como excluídos
                 </Button>
               </div>
             </CardHeader>
