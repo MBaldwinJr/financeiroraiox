@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
 import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
+import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -47,6 +48,7 @@ export interface DreAuditSummary {
   totalTransactions: number;
   totalIssues: number;
   byReason: Record<DreAuditIssue["reason"], number>;
+  unmappedGroups: ClassificationGap[];
   issues: DreAuditIssue[];
 }
 
@@ -127,6 +129,7 @@ export const getDreAudit = createServerFn({ method: "POST" })
       totalTransactions: rows.length,
       totalIssues: issues.length,
       byReason,
+      unmappedGroups: summarizeClassificationGaps(rows),
       issues: issues.slice(0, 500),
     };
   });
