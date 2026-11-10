@@ -20,7 +20,7 @@ export const getDreMatrix = createServerFn({ method: "POST" })
       companyId: data.companyId,
       start,
       end,
-      ...data,
+      ...selectFinancialFilters(data),
     });
     const stored = aggregateByDreLine(rows);
     return buildDreMatrix(stored);
