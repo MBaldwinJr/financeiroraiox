@@ -35,7 +35,7 @@ export function bucketTransactionsByMonth(txs: readonly TransactionRow[]): Bucke
 
   for (const tx of txs) {
     if (tx.category?.is_balance_sheet === true) continue;
-    const bucket = monthly[monthIndex(tx.date)];
+    const bucket = monthly[monthIndex(tx.competencia)];
     if (tx.kind === "revenue") {
       bucket.revenue += tx.amount_cents;
       if (isPaymentMethod(tx.payment_method)) {
@@ -218,28 +218,23 @@ export interface PreviousSnapshot {
   netProfit: number;
 }
 
+/** Compara períodos usando o MESMO regime e a MESMA regra de KPIs.
+ * Mês 1 compara dezembro do ano anterior; ano completo compara ano anterior.
+ * Em particular, a despesa comparada exclui CMV, assim como a atual.
+ */
 export function computePrevious(
   month: number | null | undefined,
   year: number,
   monthly: MonthBucket[],
-  prevMonthly: PrevMonthBucket[],
-  prevYearTotal: { revenue: number; expense: number },
+  prevMonthly: MonthBucket[],
 ): PreviousSnapshot | null {
-  if (!month) {
-    return {
-      revenue: prevYearTotal.revenue,
-      expense: prevYearTotal.expense,
-      netProfit: prevYearTotal.revenue - prevYearTotal.expense,
-    };
-  }
-  const idx = month - 1;
-  if (idx > 0) {
-    const p = monthly[idx - 1];
-    return { revenue: p.revenue, expense: p.expense, netProfit: p.revenue - p.expense };
-  }
-  if (year > 2000) {
-    const p = prevMonthly[11];
-    return { revenue: p.revenue, expense: p.expense, netProfit: p.revenue - p.expense };
-  }
-  return null;
+  if (month === 1 && year <= 2000) return null;
+  const source = month == null || month === 1 ? prevMonthly : monthly;
+  const indices = month == null ? selectedMonthIndices(null) : [month === 1 ? 11 : month - 2];
+  const snapshot = computeKpis(source, indices);
+  return {
+    revenue: snapshot.grossRevenue,
+    expense: snapshot.totalExpenses,
+    netProfit: snapshot.netProfit,
+  };
 }
