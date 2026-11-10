@@ -1,4 +1,5 @@
 import { fetchAllRows } from "@/lib/supabase-paginate";
+import { applyFinancialFilters, type FinancialFilters } from "@/lib/financial-filters";
 import type { DreCompetenciaRow } from "./dre-engine.types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,10 +12,11 @@ type PaginatedQuery<T> = PromiseLike<{ data: T[] | null; error: { message: strin
  */
 export function fetchDreRows(
   supabase: SupabaseClient,
-  params: { companyId: string; start: string; end: string },
+  params: { companyId: string; start: string; end: string } & FinancialFilters,
 ): Promise<DreCompetenciaRow[]> {
   return fetchAllRows<DreCompetenciaRow>((from, to) =>
-    supabase
+    applyFinancialFilters(
+      supabase
       .from("transactions")
       .select(
         "competencia, amount_cents, kind, category:categories!inner(account_class, dre_line, is_balance_sheet)",
@@ -23,7 +25,8 @@ export function fetchDreRows(
       .is("deleted_at", null)
       .eq("categories.is_balance_sheet", false)
       .gte("competencia", params.start)
-      .lt("competencia", params.end)
-      .range(from, to) as PaginatedQuery<DreCompetenciaRow>,
+      .lt("competencia", params.end),
+      params,
+    ).range(from, to) as PaginatedQuery<DreCompetenciaRow>,
   );
 }
