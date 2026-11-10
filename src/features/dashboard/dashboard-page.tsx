@@ -333,17 +333,16 @@ export function DashboardPage() {
             <CardTitle className="text-sm font-medium">{basis === "cash" ? "Recebimentos por Forma" : basis === "erp_sales" ? "Forma de recebimento indisponível nas vendas ERP" : "Receita por Forma"}</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
+            {paymentBreakdown.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={Object.entries(byPayment)
-                    .filter(([, v]) => v > 0)
-                    .map(([k, v]) => ({ name: PAYMENT_LABELS[k], value: fromCents(v) }))}
+                  data={paymentBreakdown}
                   dataKey="value"
                   outerRadius={90}
                 >
-                  {Object.keys(byPayment).map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  {paymentBreakdown.map((entry, i) => (
+                    <Cell key={entry.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -353,6 +352,12 @@ export function DashboardPage() {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                <p className="text-sm font-medium text-slate-600">Sem pagamentos classificados</p>
+                <p className="max-w-[250px] text-xs leading-5 text-slate-400">Não há distribuição de pagamentos nesta fonte ou período.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -442,7 +447,32 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      {analyticsQuery.data && (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e9eef6] bg-white px-4 py-3 sm:px-5">
+        <div>
+          <p className="text-sm font-semibold text-[#16243a]">Análises avançadas</p>
+          <p className="text-xs text-slate-500">Fornecedores, centros de custo, heatmap e detalhamento do resultado.</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-expanded={advancedOpen}
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-800"
+        >
+          {advancedOpen ? "Recolher" : "Explorar"}
+          <ChevronDown aria-hidden="true" className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+        </Button>
+      </div>
+      {advancedOpen && analyticsQuery.isLoading && (
+        <p role="status" className="text-sm text-slate-500">Carregando análises avançadas…</p>
+      )}
+      {advancedOpen && analyticsQuery.isError && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Não foi possível carregar as análises: {analyticsQuery.error.message}
+        </p>
+      )}
+      {advancedOpen && analyticsQuery.data && (
         <>
           <section className="grid gap-4 lg:grid-cols-3">
             <Card className="glass-card">
