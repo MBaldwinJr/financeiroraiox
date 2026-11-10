@@ -112,3 +112,34 @@ test("vendas ERP substituem a receita, sem somar lançamentos", () => {
   ]);
   assert.equal(b[0].revenue, 10000);
 });
+
+test("resumo vazio em novembro não se confunde com atividade anual", () => {
+  const rows = [
+    tx({ competencia: "2026-01-06" }),
+    tx({ competencia: "2026-10-15", amount_cents: 0 }),
+  ];
+  assert.equal(domain.hasFinancialActivity("accrual", 11, rows, [], [], []), false);
+  assert.equal(domain.hasFinancialActivity("accrual", null, rows, [], [], []), true);
+  assert.equal(domain.hasFinancialActivity("accrual", 10, rows, [], [], []), true);
+});
+
+test("ausência no caixa utiliza liquidação, sem contar itens patrimoniais", () => {
+  const rows = [tx({ competencia: "2026-11-01" })];
+  const paid = [
+    { paid_at: "2026-11-05", amount_cents: 900, category: { is_balance_sheet: true } },
+    { paid_at: "2026-10-05", amount_cents: 1000, category: { is_balance_sheet: false } },
+  ];
+  assert.equal(domain.hasFinancialActivity("cash", 11, rows, paid, [], []), false);
+  assert.equal(domain.hasFinancialActivity("cash", 10, rows, paid, [], []), true);
+});
+
+test("vendas ERP respeitam o mês da venda; despesas continuam por competência", () => {
+  const expenses = [tx({
+    kind: "expense", competencia: "2026-09-01", amount_cents: 300,
+    category: { dre_group: "fixed", is_balance_sheet: false },
+  })];
+  const sales = [{ period_start: "2026-08-01", net_amount_cents: 1500, returns_cents: 0 }];
+  assert.equal(domain.hasFinancialActivity("erp_sales", 11, expenses, [], [], sales), false);
+  assert.equal(domain.hasFinancialActivity("erp_sales", 9, expenses, [], [], sales), true);
+  assert.equal(domain.hasFinancialActivity("erp_sales", 8, expenses, [], [], sales), true);
+});
