@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
+import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -103,7 +104,7 @@ export const getDreAudit = createServerFn({ method: "POST" })
         push("conta_patrimonial_em_dre");
         continue;
       }
-      if (!r.category.dre_line) push("categoria_sem_dre_line");
+      if (!isStoredDreLine(r.category.dre_line)) push("categoria_sem_dre_line");
       if (!r.category.account_class) push("categoria_sem_account_class");
     }
 
