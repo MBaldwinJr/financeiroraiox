@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
+import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,10 +21,12 @@ type Monthly = NonNullable<ReturnType<typeof useDre>["data"]>["monthly"];
 function useDre() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const year = useFilterStore((s) => s.range.year);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
   const fetcher = useServerFn(getFinancials);
   return useQuery({
-    queryKey: ["financials", companyId, year, null],
-    queryFn: () => fetcher({ data: { companyId: companyId!, year, month: null } }),
+    queryKey: ["financials", companyId, year, null, "accrual", filterKey],
+    queryFn: () => fetcher({ data: { companyId: companyId!, year, month: null, basis: "accrual", ...filters } }),
     enabled: !!companyId,
   });
 }
@@ -80,14 +83,16 @@ function buildDre(monthly: Monthly): DreRow[] {
 export function RelatoriosPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
   const year = useFilterStore((s) => s.range.year);
+  const filters = selectFinancialFilters(useFilterStore());
+  const filterKey = financialFiltersKey(filters);
   const dreQ = useDre();
 
   const fetchTx = useServerFn(listAllTransactions);
   const txQ = useQuery({
-    queryKey: ["report-transactions-all", companyId, year],
+    queryKey: ["report-transactions-all", companyId, year, filterKey],
     queryFn: () =>
       fetchTx({
-        data: { companyId: companyId!, year, month: null },
+        data: { companyId: companyId!, year, month: null, ...filters },
       }),
     enabled: !!companyId,
   });
