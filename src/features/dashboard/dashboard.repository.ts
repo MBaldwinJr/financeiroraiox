@@ -30,7 +30,7 @@ export function fetchYearTransactions(
     applyFinancialFilters(
       supabase
       .from("transactions")
-      .select("date, competencia, amount_cents, kind, payment_method, category:categories(dre_group, is_balance_sheet)")
+      .select("date, competencia, amount_cents, kind, payment_method, category:categories(dre_group, dre_line, is_balance_sheet)")
       .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("competencia", start)
