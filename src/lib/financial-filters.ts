@@ -48,9 +48,8 @@ export function applyFinancialFilters<Query>(
   query: Query,
   filters: FinancialFilters,
 ): Query {
-  let filtered = query as unknown as {
-    in: (column: string, values: string[]) => typeof filtered;
-  };
+  type FilterQuery = { in: (column: string, values: string[]) => FilterQuery };
+  let filtered = query as unknown as FilterQuery;
   for (const [field, column] of FILTER_COLUMNS) {
     const ids = filters[field];
     if (ids?.length) filtered = filtered.in(column, ids);
