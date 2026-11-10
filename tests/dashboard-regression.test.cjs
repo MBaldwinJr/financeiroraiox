@@ -143,3 +143,14 @@ test("vendas ERP respeitam o mês da venda; despesas continuam por competência"
   assert.equal(domain.hasFinancialActivity("erp_sales", 9, expenses, [], [], sales), true);
   assert.equal(domain.hasFinancialActivity("erp_sales", 8, expenses, [], [], sales), true);
 });
+
+test("resultado acumulado subtrai CMV uma vez, sem somá-lo de volta", () => {
+  const monthly = months();
+  Object.assign(monthly[0], { revenue: 100000, expense: 70000, cmv: 50000, fixed: 20000 });
+  Object.assign(monthly[1], { revenue: 80000, expense: 100000, cmv: 40000, fixed: 60000 });
+  const cumulative = domain.accumulatedNetResult(monthly);
+  assert.equal(cumulative[0], 30000);
+  assert.equal(cumulative[1], 10000);
+  assert.equal(cumulative[11], 10000);
+  assert.equal(cumulative[11], domain.computeKpis(monthly, domain.selectedMonthIndices(null)).netProfit);
+});
