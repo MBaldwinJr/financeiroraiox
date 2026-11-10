@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/tooltip";
 import { formatBRL } from "@/lib/money";
 import { listCategories } from "@/features/catalog/catalog.functions";
+import type { ClassificationGap } from "./dre-audit.domain";
+import { ClassificationGapDetails } from "./classification-gap-details";
 import {
   fillMissingCompetencia,
   getDreAudit,
@@ -87,6 +89,13 @@ export function DreAuditPage() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [targetCategory, setTargetCategory] = useState<string>("");
+  const [selectedGroup, setSelectedGroup] = useState<ClassificationGap | null>(null);
+
+  useEffect(() => {
+    setSelected(new Set());
+    setTargetCategory("");
+    setSelectedGroup(null);
+  }, [companyId, year]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["dre-audit", companyId, year],
@@ -104,6 +113,7 @@ export function DreAuditPage() {
     // Alterações explícitas feitas na auditoria afetam DRE, Dashboard, relatórios e IA.
     void queryClient.invalidateQueries();
     setSelected(new Set());
+    setSelectedGroup(null);
   };
 
   const fillMut = useMutation({
@@ -175,8 +185,8 @@ export function DreAuditPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Auditoria da DRE</h1>
         <p className="text-sm text-muted-foreground">
-          Detecta lançamentos que podem distorcer a DRE — sem categoria, sem competência ou contas
-          ou categorias fora da classificação contábil. Contas patrimoniais corretamente excluídas não são inconsistências.
+          Identifica lançamentos sem categoria, sem competência ou fora da classificação contábil.
+          Contas patrimoniais corretamente excluídas não são tratadas como inconsistências.
         </p>
       </div>
 
@@ -254,6 +264,7 @@ export function DreAuditPage() {
                         <TableHead className="text-right">Lançamentos</TableHead>
                         <TableHead className="text-right">Despesas</TableHead>
                         <TableHead className="text-right">Receitas</TableHead>
+                        <TableHead className="text-right">Investigação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -266,11 +277,32 @@ export function DreAuditPage() {
                           <TableCell className="text-right tabular-nums">{group.count}</TableCell>
                           <TableCell className="text-right tabular-nums">{formatBRL(group.expenseCents)}</TableCell>
                           <TableCell className="text-right tabular-nums">{formatBRL(group.revenueCents)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-expanded={selectedGroup?.categoryId === group.categoryId}
+                              onClick={() => {
+                                setSelectedGroup((current) => current?.categoryId === group.categoryId ? null : group);
+                              }}
+                            >
+                              {selectedGroup?.categoryId === group.categoryId ? "Fechar" : "Investigar"}
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
+                {selectedGroup && companyId && (
+                  <ClassificationGapDetails
+                    key={selectedGroup.categoryId ?? "sem-categoria"}
+                    companyId={companyId}
+                    year={year}
+                    group={selectedGroup}
+                    onClose={() => setSelectedGroup(null)}
+                  />
+                )}
               </CardContent>
             </Card>
           )}
