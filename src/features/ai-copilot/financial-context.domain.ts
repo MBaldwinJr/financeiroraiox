@@ -1,4 +1,4 @@
-import type { Kpis, PreviousSnapshot } from "@/features/dashboard/dashboard.domain";
+import type { Kpis } from "@/features/dashboard/dashboard.domain";
 import type { MonthBucket } from "@/features/dashboard/dashboard.types";
 import type { ReconciliationSnapshot } from "@/features/dre/reconciliation.domain";
 
