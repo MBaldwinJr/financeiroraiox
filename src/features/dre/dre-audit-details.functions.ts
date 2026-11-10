@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { auditDetailOffset, auditDetailPeriodFilter } from "./audit-detail-period.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -12,18 +13,6 @@ const Input = z.object({
 });
 
 const PAGE_SIZE = 25;
-
-function periodWindow(year: number, month: number | null | undefined) {
-  const start = month == null
-    ? `${year}-01-01`
-    : `${year}-${String(month).padStart(2, "0")}-01`;
-  const end = month == null
-    ? `${year + 1}-01-01`
-    : month === 12
-      ? `${year + 1}-01-01`
-      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  return { start, end };
-}
 
 export interface AuditDetailRow {
   id: string;
@@ -45,7 +34,7 @@ export const getAuditClassificationDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ context, data }) => {
-    const { start, end } = periodWindow(data.year, data.month);
+    const periodPredicate = auditDetailPeriodFilter(data.year, data.month);
     let q = context.supabase
       .from("transactions")
       .select(
@@ -54,9 +43,7 @@ export const getAuditClassificationDetails = createServerFn({ method: "POST" })
       )
       .eq("company_id", data.companyId)
       .is("deleted_at", null)
-      .or(
-        `and(competencia.gte.${start},competencia.lt.${end}),and(competencia.is.null,date.gte.${start},date.lt.${end})`,
-      );
+.or(periodPredicate);
 
     q = data.categoryId
       ? q.eq("category_id", data.categoryId)
@@ -66,11 +53,11 @@ export const getAuditClassificationDetails = createServerFn({ method: "POST" })
       q = q.ilike("description", `%${data.search.replace(/[%_]/g, "")}%`);
     }
 
-    const offset = data.page * PAGE_SIZE;
+    const { from, to } = auditDetailOffset(data.page, PAGE_SIZE);
     const { data: rows, count, error } = await q
       .order("amount_cents", { ascending: false })
       .order("id", { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
+      .range(from, to);
 
     if (error) throw new Error(error.message);
     return {
