@@ -28,6 +28,11 @@ const STORED_LINES: StoredLine[] = [
   "ir_csll",
 ];
 
+/** Mantém a validação das linhas reconhecidas consistente entre DRE e auditoria. */
+export function isStoredDreLine(line: string | null | undefined): line is StoredLine {
+  return !!line && STORED_LINES.includes(line as StoredLine);
+}
+
 /** Agrupa lançamentos por linha da DRE + mês (regime de competência). */
 export function aggregateByDreLine(rows: readonly DreCompetenciaRow[]): Record<StoredLine, DreMonthRow> {
   const acc = STORED_LINES.reduce(
@@ -42,9 +47,9 @@ export function aggregateByDreLine(rows: readonly DreCompetenciaRow[]): Record<S
     if (!r.category) continue;
     if (r.category.is_balance_sheet) continue; // NUNCA na DRE
     const line = r.category.dre_line;
-    if (!line || !STORED_LINES.includes(line as StoredLine)) continue;
+    if (!isStoredDreLine(line)) continue;
     const idx = monthIndex(r.competencia);
-    const bucket = acc[line as StoredLine];
+    const bucket = acc[line];
     bucket.monthly[idx] += r.amount_cents;
     bucket.total += r.amount_cents;
   }

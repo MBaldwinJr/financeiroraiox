@@ -10,6 +10,7 @@ import {
   computeKpis,
   hasFinancialActivity,
   computePrevious,
+  paymentBreakdownForPeriod,
   selectedMonthIndices,
 } from "./dashboard.domain";
 import {
@@ -18,7 +19,7 @@ import {
   fetchPaidRevenue,
   fetchYearTransactions,
 } from "./dashboard.repository";
-import { PAYMENT_METHODS, type ErpSaleRow, type PaidExpenseRow, type PaidRevenueRow, type RevenueBasis, type PaymentMethod } from "./dashboard.types";
+import { type ErpSaleRow, type PaidExpenseRow, type PaidRevenueRow, type RevenueBasis } from "./dashboard.types";
 
 const Schema = financialFiltersSchema.extend({
   companyId: z.string().uuid(),
@@ -76,26 +77,15 @@ export const getFinancials = createServerFn({ method: "POST" })
       loadBasisRows(context.supabase, basis, data.companyId, prev.start, prev.end, data),
     ]);
 
-    const { monthly, byPayment: accruedPayments } = bucketTransactionsByMonth(txs);
+    const { monthly } = bucketTransactionsByMonth(txs);
     const { monthly: previousMonths } = bucketTransactionsByMonth(prevTxs);
-    const byPayment = PAYMENT_METHODS.reduce((acc, method) => {
-      acc[method] = 0;
-      return acc;
-    }, {} as Record<PaymentMethod, number>);
-    if (basis === "accrual") {
-      Object.assign(byPayment, accruedPayments);
-    }
+    const byPayment = paymentBreakdownForPeriod(basis, data.month, txs, basisRows.paidRows);
     applyRevenueBasis(monthly, basis, basisRows.paidRows, basisRows.salesRows);
     applyRevenueBasis(previousMonths, basis, prevBasisRows.paidRows, prevBasisRows.salesRows);
     if (basis === "cash") {
       applyCashExpenses(monthly, basisRows.paidExpenseRows);
       applyCashExpenses(previousMonths, prevBasisRows.paidExpenseRows);
-      for (const row of basisRows.paidRows) {
-        if (row.paid_at && row.category?.is_balance_sheet !== true && row.payment_method && PAYMENT_METHODS.includes(row.payment_method as PaymentMethod)) {
-          byPayment[row.payment_method as PaymentMethod] += row.amount_cents;
-        }
-      }
-    }
+     }
 
     const prevMonthly = previousMonths.map(({ revenue, expense }) => ({ revenue, expense }));
 
