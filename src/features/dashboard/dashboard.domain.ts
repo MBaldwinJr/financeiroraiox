@@ -282,3 +282,15 @@ export function hasFinancialActivity(
     (row) => isResultCategory(row.category) && isWithinPeriod(row.competencia),
   );
 }
+
+/**
+ * Resultado gerencial acumulado em centavos. Não é saldo bancário.
+ * O CMV já integra expense e não pode ser somado de volta.
+ */
+export function accumulatedNetResult(monthly: readonly MonthBucket[]): number[] {
+  let cumulative = 0;
+  return monthly.map((bucket) => {
+    cumulative += bucket.revenue - bucket.expense;
+    return cumulative;
+  });
+}
