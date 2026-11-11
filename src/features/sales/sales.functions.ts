@@ -130,7 +130,9 @@ export const inspectSalesImport = createServerFn({ method: "POST" })
       ...match,
       validationErrors: integrity.errors,
       validationWarnings: integrity.warnings,
-      blocked: match.blocked || integrity.errors.length > 0,
+      // The normal import path is insert-only. An existing month must use a
+      // separate atomic replacement workflow, never silent upsert.
+      blocked: existing.length > 0 || match.blocked || integrity.errors.length > 0,
     };
   });
 
@@ -189,10 +191,10 @@ export const importSales = createServerFn({ method: "POST" })
       context.supabase, data.companyId, data.periodStart,
     );
     const match = assessSalesReimport(existing, data.rows, data.periodEnd);
-    if (match.blocked) {
+    if (existing.length > 0 || match.blocked) {
       throw new Error(
-        "Este período contém registros antigos que poderiam ficar duplicados ou misturados. " +
-        "Revise o relatório anterior e substitua o período de forma controlada antes de importar.",
+        "Este mês já possui dados de vendas. A importação normal não pode substituir " +
+        "registros existentes; use a prévia de substituição e aguarde a operação transacional.",
       );
     }
 
@@ -225,6 +227,7 @@ export const deleteSalesPeriod = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => DeleteSchema.parse(input))
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { error } = await context.supabase
       .from("sales")
       .update({ deleted_at: new Date().toISOString() })
