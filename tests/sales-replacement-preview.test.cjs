@@ -18,7 +18,7 @@ const identity = load("sales-import-integrity.domain.ts");
 const { createSalesReplacementPreview } = load(
   "sales-replacement-preview.domain.ts",
   (specifier) => {
-    if (specifier === "@/features/sales/sales-import-integrity.domain") return identity;
+    if (specifier === "./sales-import-integrity.domain") return identity;
     return require(specifier);
   },
 );
