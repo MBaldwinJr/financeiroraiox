@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { formatBRL, formatDate, MONTH_LABELS } from "@/lib/money";
 import type { ClassificationGap } from "./dre-audit.domain";
+import { inferReviewSignal, reviewSignalInfo } from "./dre-review-signals.domain";
 import { getAuditClassificationDetails } from "./dre-audit-details.functions";
 
 interface Props {
@@ -91,7 +92,29 @@ export function ClassificationGapDetails({ companyId, year, group, onClose }: Pr
           </form>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
+        {group.reviewSignals.length > 0 && (
+          <section aria-label="Padrões a investigar" className="space-y-3 rounded-xl border border-border bg-background/70 p-3 sm:p-4">
+            <div>
+              <p className="text-sm font-semibold">Padrões para investigação contábil</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Agrupados por palavras na descrição, usando todos os registros desta categoria no ano.
+                Não são lançamentos corrigidos nem classificações contábeis confirmadas.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {group.reviewSignals.map((item) => (
+                <div key={item.signal} className="rounded-lg border border-border bg-card p-3">
+                  <div className="text-sm font-semibold">{item.label}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{item.count} lançamento(s)</div>
+                  <div className="mt-2 text-sm font-semibold tabular-nums">{formatBRL(item.expenseCents)} em despesas</div>
+                  {item.revenueCents !== 0 && <div className="text-xs tabular-nums">{formatBRL(item.revenueCents)} em receitas</div>}
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.reviewQuestion}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         {query.isLoading && <p role="status" className="text-sm text-muted-foreground">Carregando lançamentos…</p>}
         {query.isError && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-3 text-sm text-destructive">
@@ -112,6 +135,7 @@ export function ClassificationGapDetails({ companyId, year, group, onClose }: Pr
                     <TableHead>Competência</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Sinal de revisão</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Situação</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
@@ -123,6 +147,7 @@ export function ClassificationGapDetails({ companyId, year, group, onClose }: Pr
                       <TableCell className="whitespace-nowrap text-xs">{entry.competencia ? formatDate(entry.competencia) : "Não informada"}</TableCell>
                       <TableCell className="whitespace-nowrap text-xs">{formatDate(entry.date)}</TableCell>
                       <TableCell className="min-w-[220px] max-w-[460px] text-xs">{entry.description ?? "Sem descrição"}</TableCell>
+                      <TableCell className="min-w-[140px] text-xs text-muted-foreground">{reviewSignalInfo(inferReviewSignal(entry.description)).label}</TableCell>
                       <TableCell className="text-xs">{entry.kind === "expense" ? "Despesa" : "Receita"}</TableCell>
                       <TableCell className="text-xs">{entry.status === "paid" ? "Liquidado" : "Pendente"}</TableCell>
                       <TableCell className="whitespace-nowrap text-right text-xs tabular-nums font-medium">{formatBRL(entry.amount_cents)}</TableCell>
