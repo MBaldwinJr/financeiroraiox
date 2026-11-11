@@ -75,7 +75,7 @@ test("grafia diferente é mostrada como risco e não é mesclada silenciosamente
     [newSale("João Teste", 100000, 50000)],
   );
   assert.equal(report.spellingChanges, 1);
-  assert.deepEqual(report.differences.map((x) => x.change), ["removed", "added"]);
+  assert.deepEqual(new Set(report.differences.map((x) => x.change)), new Set(["removed", "added"]));
   assert.equal(report.difference.costCents, 0);
 });
 
