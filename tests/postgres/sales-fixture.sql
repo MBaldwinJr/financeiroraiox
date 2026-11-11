@@ -54,14 +54,14 @@ for each row execute function public.set_updated_at();
 -- Force a failure during the post-delete INSERT to test complete rollback.
 create function public.synthetic_fail_sales_insert() returns trigger
 language plpgsql set search_path = ''
-as $
+as $synthetic_trigger$
 begin
   if new.seller_name = 'ROLLBACK_TEST' then
     raise exception 'synthetic insert failure' using errcode='P0001';
   end if;
   return new;
 end;
-$;
+$synthetic_trigger$;
 create trigger synthetic_fail_sales_insert before insert on public.sales
 for each row execute function public.synthetic_fail_sales_insert();
 
