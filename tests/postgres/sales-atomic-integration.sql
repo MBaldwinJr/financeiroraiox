@@ -59,9 +59,13 @@ with result as (
   ) as payload
 )
 select payload->>'replayed' as replay_result from result \gset
+select set_config('test.replayed',:'replay_result',false);
 
-do $$
+do $
 begin
+  if current_setting('test.replayed') <> 'true' then
+    raise exception 'Idempotent request was not replayed';
+  end if;
   if current_setting('test.initial_version') = current_setting('test.replacement_version') then
     raise exception 'Version should change after replacement';
   end if;
@@ -141,8 +145,9 @@ with result as (
 select payload->>'version' as restored_version,
        payload->>'revisionId' as restore_revision_id
 from result \gset
+select set_config('test.restored_version',:'restored_version',false);
 
-do $$
+do $
 begin
   if (select count(*) from public.sales
       where company_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -154,7 +159,7 @@ begin
       and period_start='2026-05-01')<>60000 then
     raise exception 'Restore did not recover original cost';
   end if;
-  if current_setting('test.initial_version')<>:'restored_version' then
+  if current_setting('test.initial_version')<>current_setting('test.restored_version') then
     raise exception 'Restore must recover identical original fingerprint';
   end if;
 end $$;
