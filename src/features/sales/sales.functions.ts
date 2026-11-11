@@ -85,6 +85,8 @@ function atomicRpc(client: unknown) {
 const isAtomicStaging = () => canRunSalesReplacementInStaging(
   process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
   process.env.SALES_REPLACEMENT_ENV,
+  process.env.SUPABASE_URL,
+  process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
 );
 
 const DeleteSchema = z.object({
@@ -267,6 +269,8 @@ export const commitSalesReplacement = createServerFn({ method: "POST" })
     assertSalesReplacementInStaging(
       process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
       process.env.SALES_REPLACEMENT_ENV,
+      process.env.SUPABASE_URL,
+      process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
     );
     await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
 
@@ -310,6 +314,8 @@ export const restoreSalesPeriodInStaging = createServerFn({ method: "POST" })
     assertSalesReplacementInStaging(
       process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
       process.env.SALES_REPLACEMENT_ENV,
+      process.env.SUPABASE_URL,
+      process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
     );
     await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { data: result, error } = await atomicRpc(context.supabase).rpc(
