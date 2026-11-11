@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseSalesPdf, type ParsedSalesReport } from "./sales-pdf-parser";
 import { importSales, inspectSalesImport } from "./sales.functions";
 import { formatBRL } from "@/lib/money";
+import { SalesReplacementPreview } from "./sales-replacement-preview";
 
 export function SalesImportPage() {
   const companyId = useCompanyStore((s) => s.activeCompanyId);
@@ -167,6 +168,13 @@ export function SalesImportPage() {
                       ? "Importação bloqueada: o arquivo pode deixar registros antigos ou duplicados no período."
                       : `Conferência concluída: ${preview.data.incomingCount} registros no PDF e ${preview.data.existingCount} já cadastrados neste período.`}
                   </p>
+                  {preview.data.existingCount > 0 && (
+                    <p className="font-medium text-amber-700">
+                      Já existe relatório cadastrado para esta competência. A importação simples
+                      está bloqueada para impedir sobrescrita silenciosa. Utilize a comparação
+                      abaixo para avaliar as diferenças e preservar uma cópia original.
+                    </p>
+                  )}
                   {preview.data.missingExistingCount > 0 && (
                     <p className="text-destructive">
                       {preview.data.missingExistingCount} registro(s) existente(s) não aparecem no novo PDF.
@@ -247,6 +255,13 @@ export function SalesImportPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+      {report && companyMatches && (
+        <SalesReplacementPreview
+          companyId={companyId}
+          report={report}
+          fileName={fileName}
+        />
       )}
     </div>
   );
