@@ -29,7 +29,7 @@ export const getCmvSourceReconciliation = createServerFn({ method: "POST" })
         context.supabase
           .from("sales")
           .select(
-            "period_start, period_end, cost_cents",
+            "period_start, period_end, cost_cents, seller_name, seller_code, source_file",
             withCount ? { count: "exact" } : undefined,
           )
           .eq("company_id", data.companyId)
