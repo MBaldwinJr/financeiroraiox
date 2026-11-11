@@ -176,9 +176,9 @@ export function SalesImportPage() {
                   {(preview.data.nameVariantCount > 0 || preview.data.previousDuplicateCount > 0 || preview.data.periodMismatchCount > 0) && (
                     <p className="text-destructive">
                       Possível duplicação por grafia ou divergência de períodos:
-                      { " " }${preview.data.nameVariantCount} nomes divergentes,
-                      { " " }${preview.data.previousDuplicateCount} duplicações antigas e
-                      { " " }${preview.data.periodMismatchCount} datas de encerramento diferentes.
+                      { " " }{preview.data.nameVariantCount} nomes divergentes,
+                      { " " }{preview.data.previousDuplicateCount} duplicações antigas e
+                      { " " }{preview.data.periodMismatchCount} datas de encerramento diferentes.
                     </p>
                   )}
                   {preview.data.validationErrors.map((message) => (
