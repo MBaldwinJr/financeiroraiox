@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { FileText, Upload, Loader2 } from "lucide-react";
 
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { parseSalesPdf, type ParsedSalesReport } from "./sales-pdf-parser";
-import { importSales } from "./sales.functions";
+import { importSales, inspectSalesImport } from "./sales.functions";
 import { formatBRL } from "@/lib/money";
 
 export function SalesImportPage() {
@@ -19,11 +19,36 @@ export function SalesImportPage() {
   const [parsing, setParsing] = useState(false);
   const [report, setReport] = useState<ParsedSalesReport | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [reportCompanyId, setReportCompanyId] = useState<string | null>(null);
 
   const importFn = useServerFn(importSales);
+  const inspectFn = useServerFn(inspectSalesImport);
+  const companyMatches = Boolean(report && companyId && reportCompanyId === companyId);
+  const preview = useQuery({
+    queryKey: ["sales-import-preview", companyId, report?.periodStart, report?.periodEnd, report?.rows],
+    enabled: companyMatches,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    queryFn: () => {
+      if (!report || !companyId) throw new Error("Selecione a empresa e um relatório.");
+      return inspectFn({
+        data: {
+          companyId,
+          periodStart: report.periodStart,
+          periodEnd: report.periodEnd,
+          sourceFile: fileName,
+          rows: report.rows.map((row) => ({ ...row })),
+        },
+      });
+    },
+  });
+  const canImport = companyMatches && preview.isSuccess && !preview.data.blocked;
+
   const importMut = useMutation({
     mutationFn: () => {
-      if (!report || !companyId) throw new Error("Sem dados para importar.");
+      if (!report || !companyId || !canImport) {
+        throw new Error("O relatório ainda não passou na conferência de integridade para esta empresa.");
+      }
       return importFn({
         data: {
           companyId,
@@ -38,6 +63,7 @@ export function SalesImportPage() {
       toast.success(`${saved} colaborador(es) importado(s).`);
       setReport(null);
       setFileName(null);
+      setReportCompanyId(null);
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["financials"] });
       qc.invalidateQueries({ queryKey: ["commercial"] });
@@ -52,6 +78,7 @@ export function SalesImportPage() {
     try {
       const parsed = await parseSalesPdf(file);
       setReport(parsed);
+      setReportCompanyId(companyId);
       setFileName(file.name);
       toast.success(`${parsed.rows.length} linhas lidas — Total ${formatBRL(parsed.totals.netAmountCents)}.`);
     } catch (e) {
@@ -111,13 +138,58 @@ export function SalesImportPage() {
             </div>
             <Button
               onClick={() => importMut.mutate()}
-              disabled={importMut.isPending || !report.rows.length}
+              disabled={importMut.isPending || !report.rows.length || !canImport}
             >
               <Upload className="mr-2 h-4 w-4" />
               {importMut.isPending ? "Importando…" : `Importar ${report.rows.length}`}
             </Button>
           </CardHeader>
           <CardContent className="p-0">
+            <div className="space-y-2 border-b border-border px-3 py-3 text-xs" role="status">
+              {!companyMatches && (
+                <p className="text-destructive">
+                  A empresa ativa mudou após a leitura do arquivo. Selecione novamente o PDF
+                  na empresa correta para evitar importação cruzada.
+                </p>
+              )}
+              {companyMatches && preview.isLoading && (
+                <p className="text-muted-foreground">Conferindo vendedores e dados já importados…</p>
+              )}
+              {companyMatches && preview.isError && (
+                <p role="alert" className="text-destructive">
+                  Não foi possível verificar o mês existente. A importação permanece bloqueada.
+                </p>
+              )}
+              {companyMatches && preview.data && (
+                <>
+                  <p className={preview.data.blocked ? "font-medium text-destructive" : "text-muted-foreground"}>
+                    {preview.data.blocked
+                      ? "Importação bloqueada: o arquivo pode deixar registros antigos ou duplicados no período."
+                      : `Conferência concluída: ${preview.data.incomingCount} registros no PDF e ${preview.data.existingCount} já cadastrados neste período.`}
+                  </p>
+                  {preview.data.missingExistingCount > 0 && (
+                    <p className="text-destructive">
+                      {preview.data.missingExistingCount} registro(s) existente(s) não aparecem no novo PDF.
+                      Revise e substitua o período de forma controlada.
+                    </p>
+                  )}
+                  {(preview.data.nameVariantCount > 0 || preview.data.previousDuplicateCount > 0 || preview.data.periodMismatchCount > 0) && (
+                    <p className="text-destructive">
+                      Possível duplicação por grafia ou divergência de períodos:
+                      { " " }${preview.data.nameVariantCount} nomes divergentes,
+                      { " " }${preview.data.previousDuplicateCount} duplicações antigas e
+                      { " " }${preview.data.periodMismatchCount} datas de encerramento diferentes.
+                    </p>
+                  )}
+                  {preview.data.validationErrors.map((message) => (
+                    <p key={message} className="text-destructive">{message}</p>
+                  ))}
+                  {preview.data.validationWarnings.map((message) => (
+                    <p key={message} className="text-amber-700">{message}</p>
+                  ))}
+                </>
+              )}
+            </div>
             <div className="max-h-[500px] overflow-auto">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-secondary/80 text-muted-foreground backdrop-blur">
