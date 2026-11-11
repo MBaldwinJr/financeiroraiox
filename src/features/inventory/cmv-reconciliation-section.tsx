@@ -14,6 +14,7 @@ const STATUS_LABELS: Record<CmvCheckStatus, string> = {
   missing_pdf: "PDF não encontrado",
   missing_dre: "Sem CMV na DRE",
   partial_period: "Período do PDF incompleto",
+  duplicate_sellers: "Vendedores repetidos no mês",
   investigate: "Investigar diferença",
   cent_difference: "Diferença em centavos",
   totals_equal: "Totais iguais",
@@ -85,6 +86,7 @@ export function CmvReconciliationSection({ companyId, year }: { companyId: strin
                       <TableHead className="text-right">CMV na DRE</TableHead>
                       <TableHead className="text-right">Custo no PDF</TableHead>
                       <TableHead className="text-right">Diferença</TableHead>
+                      <TableHead>Integridade da origem</TableHead>
                       <TableHead>Estoque no fechamento</TableHead>
                       <TableHead>Verificação</TableHead>
                     </TableRow>
@@ -102,6 +104,20 @@ export function CmvReconciliationSection({ companyId, year }: { companyId: strin
                         <TableCell className="whitespace-nowrap text-right tabular-nums">
                           {row.differenceCents !== null ? formatBRL(row.differenceCents) : "—"}
                         </TableCell>
+                        <TableCell className="min-w-[180px] text-xs text-muted-foreground">
+                          <span className="block">{row.importedRows} registro(s) · {row.sourceFileCount} arquivo(s)</span>
+                          {row.missingSellerCodes > 0 && (
+                            <span className="block">{row.missingSellerCodes} sem código de vendedor</span>
+                          )}
+                          {row.duplicateSellerRows > 0 && (
+                            <span className="block font-semibold text-amber-700">
+                              {row.duplicateSellerRows} nome(s) duplicado(s)
+                            </span>
+                          )}
+                          {row.untrackedSourceRows > 0 && (
+                            <span className="block text-amber-700">{row.untrackedSourceRows} sem arquivo de origem</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs">
                           {row.inventoryClosingSnapshotDate
                             ? <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> {row.inventoryClosingSnapshotDate}</span>
@@ -109,7 +125,8 @@ export function CmvReconciliationSection({ companyId, year }: { companyId: strin
                               ? `Sem fechamento; último registro ${row.latestInventorySnapshotDate}`
                               : "Sem snapshot no mês"}
                         </TableCell>
-                        <TableCell className={row.status === "investigate" ? "font-medium text-amber-700" : "text-xs text-muted-foreground"}>
+                        <TableCell className={row.status === "investigate" || row.status === "duplicate_sellers"
+                          ? "font-medium text-amber-700" : "text-xs text-muted-foreground"}>
                           {STATUS_LABELS[row.status]}
                         </TableCell>
                       </TableRow>
@@ -119,7 +136,7 @@ export function CmvReconciliationSection({ companyId, year }: { companyId: strin
               </div>
               <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                Igualdade dos valores não valida a integridade dos PDFs, devoluções ou custos.
+                Igualdade dos valores não valida a integridade dos PDFs, devoluções ou custos. A ausência de códigos de vendedor dificulta identificar mudanças de grafia; a contagem de arquivos não comprova cobertura total.
                 O cálculo contábil completo exige compras líquidas, ajustes de estoque, documentos
                 e saldo inicial/final na mesma competência. Pagamentos a fornecedores não são o custo
                 das mercadorias vendidas.
