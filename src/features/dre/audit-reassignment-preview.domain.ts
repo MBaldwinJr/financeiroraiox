@@ -15,7 +15,9 @@ export interface PreviewDestination {
 }
 
 export interface PreviewDifference {
-  line: "receita_bruta" | "deducoes" | "cmv" | "lucro_bruto" | "lucro_liquido";
+  line:
+    | "receita_bruta" | "deducoes" | "cmv" | "lucro_bruto"
+    | "ebitda" | "ebit" | "resultado_financeiro" | "lair" | "lucro_liquido";
   label: string;
   beforeCents: number;
   afterCents: number;
@@ -27,6 +29,10 @@ const COMPARE_LINES = [
   ["deducoes", "Deduções"],
   ["cmv", "CMV"],
   ["lucro_bruto", "Lucro Bruto"],
+  ["ebitda", "EBITDA"],
+  ["ebit", "EBIT"],
+  ["resultado_financeiro", "Resultado financeiro (encargos)"],
+  ["lair", "Resultado antes dos tributos"],
   ["lucro_liquido", "Lucro Líquido"],
 ] as const;
 
