@@ -186,6 +186,13 @@ export function DashboardPage() {
       </header>
 
       <FilterBar appearance="light" />
+      {basis === "cash" && (
+        <p className="rounded-xl border border-blue-100 bg-white p-3 text-xs leading-5 text-slate-600">
+          <strong className="text-slate-800">Caixa no Dashboard:</strong> visão gerencial de resultado
+          com base nas liquidações, não fluxo bancário completo. Pagamentos patrimoniais a fornecedores
+          não são despesas adicionais na DRE; veja essas saídas na aba Fluxo de Caixa.
+        </p>
+      )}
       {query.isFetching && (
         <p role="status" className="text-xs text-slate-500">Atualizando os indicadores…</p>
       )}
