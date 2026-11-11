@@ -93,6 +93,13 @@ export function assessSalesReimport(
   const newSellerCount = [...newKeys].filter((key) => !previousKeys.has(key)).length;
   const retainedCount = [...newKeys].filter((key) => previousKeys.has(key)).length;
   const previousDuplicateCount = existing.length - previousKeys.size;
+  const existingExactNames = new Map(existing.map((row) =>
+    [normalizedSellerKey(row.sellerName), row.sellerName.trim()],
+  ));
+  const nameVariantCount = incoming.filter((row) => {
+    const existingExact = existingExactNames.get(normalizedSellerKey(row.sellerName));
+    return existingExact != null && existingExact !== row.sellerName.trim();
+  }).length;
   const periodMismatchCount = newPeriodEnd
     ? existing.filter((row) => row.periodEnd != null && row.periodEnd !== newPeriodEnd).length
     : 0;
@@ -103,7 +110,9 @@ export function assessSalesReimport(
     newSellerCount,
     retainedCount,
     previousDuplicateCount,
+    nameVariantCount,
     periodMismatchCount,
-    blocked: missingExistingCount > 0 || previousDuplicateCount > 0 || periodMismatchCount > 0,
+    blocked: missingExistingCount > 0 || previousDuplicateCount > 0
+      || nameVariantCount > 0 || periodMismatchCount > 0,
   };
 }
