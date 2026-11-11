@@ -346,7 +346,7 @@ export function DreAuditPage() {
                     if (confirm(`Preencher a competência de ${selectedMissingCompetencia.length} lançamento(s) usando a data do registro? Isso pode afetar a DRE. Confirme apenas após verificar que as datas correspondem ao fato gerador.`)) {
                       fillMut.mutate(selectedMissingCompetencia);
                     }
-                  }
+                  }}
                 >
                   Preencher competência = data ({selectedMissingCompetencia.length})
                 </Button>
@@ -376,7 +376,7 @@ export function DreAuditPage() {
                     if (confirm(`Reatribuir ${selectedIds.length} lançamento(s) para "${chosen.name}"? A categoria deve ter o mesmo tipo (receita/despesa) dos lançamentos. Esta ação altera os relatórios financeiros. Confirme somente após revisar os documentos.`)) {
                       reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory });
                     }
-                  }
+                  }}
                 >
                   Aplicar categoria
                 </Button>
