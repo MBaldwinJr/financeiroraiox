@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { fetchAllRows } from "@/lib/supabase-paginate";
+import { fetchAllRowsConcurrent } from "@/lib/supabase-paginate";
 
 
 const PAYMENT_METHODS = ["cash", "pix", "boleto", "cheque", "card"] as const;
@@ -111,17 +111,19 @@ export const listAllTransactions = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AllFilterSchema.parse(input))
   .handler(async ({ context, data }) => {
     const { start, end } = rangeForFilters(data.year, data.month);
-    const rows = await fetchAllRows<AllTxRow>((from, to) => {
+    const rows = await fetchAllRowsConcurrent<AllTxRow>((from, to, withCount) => {
       let q = context.supabase
         .from("transactions")
         .select(
           "id, date, description, amount_cents, kind, payment_method, status, notes, category_id, cost_center_id, bank_account_id, party_id, categories(name, dre_group), cost_centers(name), bank_accounts(name), parties(name)",
+          withCount ? { count: "exact" } : undefined,
         )
         .eq("company_id", data.companyId)
         .is("deleted_at", null)
         .gte("date", start)
         .lt("date", end)
         .order("date", { ascending: false })
+        .order("id", { ascending: true })
         .range(from, to);
       if (data.search) q = q.ilike("description", `%${data.search}%`);
       if (data.kind) q = q.eq("kind", data.kind);
@@ -130,7 +132,7 @@ export const listAllTransactions = createServerFn({ method: "POST" })
       if (data.bankAccountIds?.length) q = q.in("bank_account_id", data.bankAccountIds);
       if (data.partyIds?.length) q = q.in("party_id", data.partyIds);
       if (data.paymentMethods?.length) q = q.in("payment_method", data.paymentMethods);
-      return q as unknown as PromiseLike<{ data: AllTxRow[] | null; error: { message: string } | null }>;
+      return q as unknown as PromiseLike<{ data: AllTxRow[] | null; error: { message: string } | null; count?: number | null }>;
     });
     return { rows, total: rows.length };
   });
