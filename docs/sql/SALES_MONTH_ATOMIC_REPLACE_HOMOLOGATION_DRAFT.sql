@@ -35,7 +35,7 @@ create or replace function finance_internal.sales_month_version(
   p_company_id uuid, p_period_start date
 ) returns text
 language plpgsql volatile security definer set search_path = ''
-as $
+as $sqlfn1$
 begin
   if auth.uid() is null or not exists (
     select 1 from public.company_members m
@@ -52,7 +52,7 @@ begin
     ), '[]')
   );
 end;
-$;
+$sqlfn1$;
 revoke all on function finance_internal.sales_month_version(uuid,date) from public, anon, authenticated;
 grant execute on function finance_internal.sales_month_version(uuid,date) to authenticated;
 
@@ -61,7 +61,7 @@ create or replace function public.sales_month_version(
   p_company_id uuid, p_period_start date
 ) returns text
 language plpgsql volatile security invoker set search_path = ''
-as $$
+as $sqlfn2$
 declare v_user uuid;
 begin
   v_user := auth.uid();
@@ -75,7 +75,7 @@ begin
   end if;
   return finance_internal.sales_month_version(p_company_id,p_period_start);
 end;
-$$;
+$sqlfn2$;
 revoke all on function public.sales_month_version(uuid,date) from public, anon, authenticated;
 grant execute on function public.sales_month_version(uuid,date) to authenticated;
 
@@ -93,7 +93,7 @@ create or replace function finance_internal.sales_month_commit(
   p_source_file text
 ) returns jsonb
 language plpgsql security definer set search_path = ''
-as $$
+as $sqlfn3$
 declare
   v_actor uuid := auth.uid();
   v_count int;
@@ -225,7 +225,7 @@ begin
 
   return jsonb_build_object('revisionId',v_id,'version',v_version,'saved',v_count,'replayed',false);
 end;
-$$;
+$sqlfn3$;
 
 revoke all on function finance_internal.sales_month_commit(uuid,date,date,text,uuid,jsonb,text)
   from public, anon, authenticated;
@@ -237,11 +237,11 @@ create or replace function public.sales_month_commit(
   p_expected_version text, p_request_id uuid, p_rows jsonb, p_source_file text
 ) returns jsonb
 language sql volatile security invoker set search_path = ''
-as $$
+as $sqlfn4$
   select finance_internal.sales_month_commit(
     p_company_id,p_period_start,p_period_end,p_expected_version,p_request_id,p_rows,p_source_file
   );
-$$;
+$sqlfn4$;
 revoke all on function public.sales_month_commit(uuid,date,date,text,uuid,jsonb,text)
   from public, anon, authenticated;
 grant execute on function public.sales_month_commit(uuid,date,date,text,uuid,jsonb,text)
@@ -254,7 +254,7 @@ create or replace function finance_internal.sales_month_restore(
   p_expected_version text, p_request_id uuid
 ) returns jsonb
 language plpgsql security definer set search_path = ''
-as $$
+as $sqlfn5$
 declare
   v_actor uuid := auth.uid();
   v_source finance_internal.sales_month_revisions%rowtype;
@@ -341,7 +341,7 @@ begin
   ) returning id into v_id;
   return jsonb_build_object('revisionId',v_id,'version',v_version,'replayed',false);
 end;
-$$;
+$sqlfn5$;
 revoke all on function finance_internal.sales_month_restore(uuid,date,uuid,text,uuid)
   from public,anon,authenticated;
 grant execute on function finance_internal.sales_month_restore(uuid,date,uuid,text,uuid)
@@ -352,11 +352,11 @@ create or replace function public.sales_month_restore(
   p_expected_version text,p_request_id uuid
 ) returns jsonb
 language sql volatile security invoker set search_path = ''
-as $$
+as $sqlfn6$
   select finance_internal.sales_month_restore(
     p_company_id,p_period_start,p_revision_id,p_expected_version,p_request_id
   );
-$$;
+$sqlfn6$;
 revoke all on function public.sales_month_restore(uuid,date,uuid,text,uuid)
   from public,anon,authenticated;
 grant execute on function public.sales_month_restore(uuid,date,uuid,text,uuid)
