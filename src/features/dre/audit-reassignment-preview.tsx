@@ -11,7 +11,7 @@ interface Props {
   categoryId: string;
   selectedIds: string[];
   submitting: boolean;
-  onApply: () => void;
+  onApply: (confirmToken: string) => void;
 }
 
 /**
@@ -78,7 +78,7 @@ export function AuditReassignmentPreview({
               "A simulação considera apenas a seleção, não os totais da empresa.",
               "Verifique os documentos antes de aplicar a alteração.",
             ].join("\n");
-            if (confirm(message)) onApply();
+            if (confirm(message)) onApply(impact.confirmToken);
           }}
         >
           Aplicar categoria após revisão
