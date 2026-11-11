@@ -3,6 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
 import { assessSalesImport, assessSalesReimport } from "./sales-import-integrity.domain";
+import { requireAuditMutationRole } from "@/features/dre/dre-audit-permissions.domain";
+import {
+  createSalesReplacementPreview,
+  type ExistingSaleForReplacement,
+} from "./sales-replacement-preview.domain";
 
 const ListSchema = z.object({
   companyId: z.string().uuid(),
@@ -125,7 +130,51 @@ export const inspectSalesImport = createServerFn({ method: "POST" })
       ...match,
       validationErrors: integrity.errors,
       validationWarnings: integrity.warnings,
-      blocked: match.blocked || integrity.errors.length > 0,
+      // The normal import path is insert-only. An existing month must use a
+      // separate atomic replacement workflow, never silent upsert.
+      blocked: existing.length > 0 || match.blocked || integrity.errors.length > 0,
+    };
+  });
+
+/**
+ * Read-only proposal. Only company owners/admins may receive the original
+ * report as a local backup. No deletion, upsert or RPC is performed.
+ */
+export const previewSalesReplacement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ImportSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+
+    const existing = await fetchAllRows<ExistingSaleForReplacement>((from, to) =>
+      context.supabase
+        .from("sales")
+        .select(
+          "id, seller_name, seller_code, period_end, net_amount_cents, returns_cents, cost_cents, items_qty, sales_qty, source_file, imported_at, updated_at",
+        )
+        .eq("company_id", data.companyId)
+        .eq("period_start", data.periodStart)
+        .is("deleted_at", null)
+        .order("seller_name", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{
+          data: ExistingSaleForReplacement[] | null;
+          error: { message: string } | null;
+        }>,
+    );
+
+    const preview = createSalesReplacementPreview(
+      data.companyId,
+      data.periodStart,
+      data.periodEnd,
+      existing,
+      data.rows,
+    );
+    return {
+      ...preview,
+      // The original rows are available ONLY in this owner/admin authenticated
+      // response so the operator can export a local recovery file.
+      originalRows: existing,
     };
   });
 
@@ -142,10 +191,10 @@ export const importSales = createServerFn({ method: "POST" })
       context.supabase, data.companyId, data.periodStart,
     );
     const match = assessSalesReimport(existing, data.rows, data.periodEnd);
-    if (match.blocked) {
+    if (existing.length > 0 || match.blocked) {
       throw new Error(
-        "Este período contém registros antigos que poderiam ficar duplicados ou misturados. " +
-        "Revise o relatório anterior e substitua o período de forma controlada antes de importar.",
+        "Este mês já possui dados de vendas. A importação normal não pode substituir " +
+        "registros existentes; use a prévia de substituição e aguarde a operação transacional.",
       );
     }
 
@@ -178,6 +227,7 @@ export const deleteSalesPeriod = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => DeleteSchema.parse(input))
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { error } = await context.supabase
       .from("sales")
       .update({ deleted_at: new Date().toISOString() })
