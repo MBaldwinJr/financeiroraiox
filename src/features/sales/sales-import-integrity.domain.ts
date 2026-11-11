@@ -83,8 +83,9 @@ export function assessSalesImport(
 
 /** Count only. Never expose existing seller identities in the API response. */
 export function assessSalesReimport(
-  existing: readonly SaleIdentity[],
+  existing: readonly (SaleIdentity & { periodEnd?: string | null })[],
   incoming: readonly SaleIdentity[],
+  newPeriodEnd?: string,
 ) {
   const previousKeys = new Set(existing.map((row) => normalizedSellerKey(row.sellerName)));
   const newKeys = new Set(incoming.map((row) => normalizedSellerKey(row.sellerName)));
@@ -92,6 +93,9 @@ export function assessSalesReimport(
   const newSellerCount = [...newKeys].filter((key) => !previousKeys.has(key)).length;
   const retainedCount = [...newKeys].filter((key) => previousKeys.has(key)).length;
   const previousDuplicateCount = existing.length - previousKeys.size;
+  const periodMismatchCount = newPeriodEnd
+    ? existing.filter((row) => row.periodEnd != null && row.periodEnd !== newPeriodEnd).length
+    : 0;
   return {
     existingCount: existing.length,
     incomingCount: incoming.length,
@@ -99,6 +103,7 @@ export function assessSalesReimport(
     newSellerCount,
     retainedCount,
     previousDuplicateCount,
-    blocked: missingExistingCount > 0 || previousDuplicateCount > 0,
+    periodMismatchCount,
+    blocked: missingExistingCount > 0 || previousDuplicateCount > 0 || periodMismatchCount > 0,
   };
 }
