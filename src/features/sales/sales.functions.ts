@@ -5,6 +5,11 @@ import { fetchAllRows } from "@/lib/supabase-paginate";
 import { assessSalesImport, assessSalesReimport } from "./sales-import-integrity.domain";
 import { requireAuditMutationRole } from "@/features/dre/dre-audit-permissions.domain";
 import {
+  assertSalesReplacementInStaging,
+  canRunSalesReplacementInStaging,
+  isSalesMonthDatabaseVersion,
+} from "./sales-replacement-activation.domain";
+import {
   createSalesReplacementPreview,
   type ExistingSaleForReplacement,
 } from "./sales-replacement-preview.domain";
@@ -32,6 +37,57 @@ const ImportSchema = z.object({
   sourceFile: z.string().nullable().optional(),
   rows: z.array(RowSchema).min(1),
 });
+
+const AtomicRestoreSchema = z.object({
+  companyId: z.string().uuid(),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  revisionId: z.string().uuid(),
+  expectedDatabaseVersion: z.string().regex(/^[a-f0-9]{32}$/),
+  requestId: z.string().uuid(),
+});
+
+const RestoreRpcResultSchema = z.object({
+  revisionId: z.string().uuid(),
+  version: z.string().regex(/^[a-f0-9]{32}$/),
+  replayed: z.boolean(),
+});
+
+const AtomicCommitSchema = ImportSchema.extend({
+  expectedDatabaseVersion: z.string().regex(/^[a-f0-9]{32}$/),
+  previewToken: z.string().regex(/^[a-f0-9]{64}$/),
+  requestId: z.string().uuid(),
+});
+
+type AtomicRpcResult = {
+  revisionId: string;
+  version: string;
+  saved: number;
+  replayed: boolean;
+};
+const RpcResultSchema = z.object({
+  revisionId: z.string().uuid(),
+  version: z.string().regex(/^[a-f0-9]{32}$/),
+  saved: z.number().int().min(0),
+  replayed: z.boolean(),
+});
+
+// Generated Database types are not updated until the staging RPC is migrated.
+// Cast is intentionally isolated to this server-only RPC adapter.
+function atomicRpc(client: unknown) {
+  return client as {
+    rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{
+      data: unknown;
+      error: { message: string } | null;
+    }>;
+  };
+}
+
+const isAtomicStaging = () => canRunSalesReplacementInStaging(
+  process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
+  process.env.SALES_REPLACEMENT_ENV,
+  process.env.SUPABASE_URL,
+  process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
+);
 
 const DeleteSchema = z.object({
   companyId: z.string().uuid(),
@@ -140,27 +196,37 @@ export const inspectSalesImport = createServerFn({ method: "POST" })
  * Read-only proposal. Only company owners/admins may receive the original
  * report as a local backup. No deletion, upsert or RPC is performed.
  */
+async function getOriginalSalesForReplacement(
+  supabase: { from: (table: "sales") => any },
+  companyId: string,
+  periodStart: string,
+): Promise<ExistingSaleForReplacement[]> {
+  return fetchAllRows<ExistingSaleForReplacement>((from, to) =>
+    supabase
+      .from("sales")
+      .select(
+        "id, seller_name, seller_code, period_end, net_amount_cents, returns_cents, cost_cents, items_qty, sales_qty, source_file, imported_at, updated_at",
+      )
+      .eq("company_id", companyId)
+      .eq("period_start", periodStart)
+      .is("deleted_at", null)
+      .order("seller_name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to) as PromiseLike<{
+        data: ExistingSaleForReplacement[] | null;
+        error: { message: string } | null;
+      }>,
+  );
+}
+
 export const previewSalesReplacement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportSchema.parse(input))
   .handler(async ({ context, data }) => {
     await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
 
-    const existing = await fetchAllRows<ExistingSaleForReplacement>((from, to) =>
-      context.supabase
-        .from("sales")
-        .select(
-          "id, seller_name, seller_code, period_end, net_amount_cents, returns_cents, cost_cents, items_qty, sales_qty, source_file, imported_at, updated_at",
-        )
-        .eq("company_id", data.companyId)
-        .eq("period_start", data.periodStart)
-        .is("deleted_at", null)
-        .order("seller_name", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to) as unknown as PromiseLike<{
-          data: ExistingSaleForReplacement[] | null;
-          error: { message: string } | null;
-        }>,
+    const existing = await getOriginalSalesForReplacement(
+      context.supabase, data.companyId, data.periodStart,
     );
 
     const preview = createSalesReplacementPreview(
@@ -170,12 +236,100 @@ export const previewSalesReplacement = createServerFn({ method: "POST" })
       existing,
       data.rows,
     );
+    let databaseVersion: string | null = null;
+    if (isAtomicStaging()) {
+      const { data: version, error } = await atomicRpc(context.supabase).rpc(
+        "sales_month_version",
+        { p_company_id: data.companyId, p_period_start: data.periodStart },
+      );
+      if (error) throw new Error("RPC de homologação indisponível: " + error.message);
+      if (!isSalesMonthDatabaseVersion(version)) {
+        throw new Error("Versão de competência inválida retornada pelo banco.");
+      }
+      databaseVersion = version;
+    }
+
     return {
       ...preview,
-      // The original rows are available ONLY in this owner/admin authenticated
-      // response so the operator can export a local recovery file.
+      databaseVersion,
+      replacementEnabled: databaseVersion !== null && isAtomicStaging(),
+      // Original rows are visible only to owner/admin via this authenticated endpoint.
       originalRows: existing,
     };
+  });
+
+/**
+ * Invoked only if a SEPARATE homologation deployment explicitly enables
+ * the flag and its database has the audited atomic RPC. Production remains off.
+ */
+export const commitSalesReplacement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AtomicCommitSchema.parse(input))
+  .handler(async ({ context, data }): Promise<AtomicRpcResult> => {
+    assertSalesReplacementInStaging(
+      process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
+      process.env.SALES_REPLACEMENT_ENV,
+      process.env.SUPABASE_URL,
+      process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
+    );
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+
+    // Second check of the full preview. The Postgres function checks a
+    // distinct DB row version AGAIN, under its transaction lock.
+    const existing = await getOriginalSalesForReplacement(
+      context.supabase, data.companyId, data.periodStart,
+    );
+    const latest = createSalesReplacementPreview(
+      data.companyId, data.periodStart, data.periodEnd, existing, data.rows,
+    );
+    if (latest.snapshotToken !== data.previewToken) {
+      throw new Error("O relatório mudou depois da comparação. Recalcule a prévia.");
+    }
+
+    const { data: result, error } = await atomicRpc(context.supabase).rpc(
+      "sales_month_commit",
+      {
+        p_company_id: data.companyId,
+        p_period_start: data.periodStart,
+        p_period_end: data.periodEnd,
+        p_expected_version: data.expectedDatabaseVersion,
+        p_request_id: data.requestId,
+        p_rows: data.rows,
+        p_source_file: data.sourceFile ?? null,
+      },
+    );
+    if (error) throw new Error("Falha na substituição transacional: " + error.message);
+    return RpcResultSchema.parse(result);
+  });
+
+/**
+ * No UI activation. For supervised HOMOLOGATION-only recovery after the
+ * proposed Postgres RPC is installed and tested with synthetic data.
+ * All restoration logic, checks and audit entries belong to one DB transaction.
+ */
+export const restoreSalesPeriodInStaging = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AtomicRestoreSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    assertSalesReplacementInStaging(
+      process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
+      process.env.SALES_REPLACEMENT_ENV,
+      process.env.SUPABASE_URL,
+      process.env.SALES_REPLACEMENT_STAGING_SUPABASE_URL,
+    );
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+    const { data: result, error } = await atomicRpc(context.supabase).rpc(
+      "sales_month_restore",
+      {
+        p_company_id: data.companyId,
+        p_period_start: data.periodStart,
+        p_revision_id: data.revisionId,
+        p_expected_version: data.expectedDatabaseVersion,
+        p_request_id: data.requestId,
+      },
+    );
+    if (error) throw new Error("Restauração de homologação recusada: " + error.message);
+    return RestoreRpcResultSchema.parse(result);
   });
 
 export const importSales = createServerFn({ method: "POST" })
@@ -196,6 +350,33 @@ export const importSales = createServerFn({ method: "POST" })
         "Este mês já possui dados de vendas. A importação normal não pode substituir " +
         "registros existentes; use a prévia de substituição e aguarde a operação transacional.",
       );
+    }
+
+    if (isAtomicStaging()) {
+      // After the staging migration revokes direct DML on sales, even an
+      // initial month must be created by the same transactional RPC.
+      await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+      const { data: version, error: versionError } = await atomicRpc(context.supabase).rpc(
+        "sales_month_version",
+        { p_company_id: data.companyId, p_period_start: data.periodStart },
+      );
+      if (versionError || !isSalesMonthDatabaseVersion(version)) {
+        throw new Error("Não foi possível validar a versão inicial do mês em homologação.");
+      }
+      const { data: committed, error: commitError } = await atomicRpc(context.supabase).rpc(
+        "sales_month_commit",
+        {
+          p_company_id: data.companyId,
+          p_period_start: data.periodStart,
+          p_period_end: data.periodEnd,
+          p_expected_version: version,
+          p_request_id: crypto.randomUUID(),
+          p_rows: data.rows,
+          p_source_file: data.sourceFile ?? null,
+        },
+      );
+      if (commitError) throw new Error(commitError.message);
+      return { saved: RpcResultSchema.parse(committed).saved };
     }
 
     const payload = data.rows.map((r) => ({
@@ -228,6 +409,9 @@ export const deleteSalesPeriod = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => DeleteSchema.parse(input))
   .handler(async ({ context, data }) => {
     await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+    if (isAtomicStaging()) {
+      throw new Error("Exclusão direta de mês desativada em homologação. Utilize a recuperação auditada.");
+    }
     const { error } = await context.supabase
       .from("sales")
       .update({ deleted_at: new Date().toISOString() })

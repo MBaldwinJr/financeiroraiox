@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRightLeft, Download, Search, ShieldAlert } from "lucide-react";
 
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBRL } from "@/lib/money";
 import type { ParsedSalesReport } from "./sales-pdf-parser";
-import { previewSalesReplacement } from "./sales.functions";
+import { previewSalesReplacement, commitSalesReplacement } from "./sales.functions";
 
 interface Props {
   companyId: string;
@@ -24,7 +25,11 @@ const labels = {
 
 export function SalesReplacementPreview({ companyId, report, fileName }: Props) {
   const [open, setOpen] = useState(false);
+  const [backupConfirmed, setBackupConfirmed] = useState(false);
+  const requestIdRef = useRef<string | null>(null);
+  const qc = useQueryClient();
   const fetcher = useServerFn(previewSalesReplacement);
+  const commit = useServerFn(commitSalesReplacement);
 
   const query = useQuery({
     queryKey: ["sales-replacement-preview", companyId, report.periodStart, report.periodEnd, fileName, report.rows],
@@ -43,6 +48,48 @@ export function SalesReplacementPreview({ companyId, report, fileName }: Props) 
   });
 
   const result = query.data;
+  // Never reuse a backup approval or idempotency key after switching a month,
+  // company or preview version.
+  useEffect(() => {
+    setBackupConfirmed(false);
+    requestIdRef.current = null;
+  }, [companyId, report.periodStart, report.periodEnd, result?.snapshotToken]);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!result?.replacementEnabled || !result.databaseVersion || query.isFetching) {
+        throw new Error("A substituição não está disponível ou a prévia está desatualizada.");
+      }
+      if (result.hasExistingPeriod && !backupConfirmed) {
+        throw new Error("Confirme o backup antes de substituir um mês já registrado.");
+      }
+      return commit({
+        data: {
+          companyId,
+          periodStart: report.periodStart,
+          periodEnd: report.periodEnd,
+          sourceFile: fileName,
+          rows: report.rows.map((row) => ({ ...row })),
+          expectedDatabaseVersion: result.databaseVersion,
+          previewToken: result.snapshotToken,
+          requestId: (requestIdRef.current ??= crypto.randomUUID()),
+        },
+      });
+    },
+    onSuccess: ({ saved }) => {
+      requestIdRef.current = null;
+      toast.success(`Substituição transacional concluída em homologação: ${saved} vendedores.`);
+      setBackupConfirmed(false);
+      void qc.invalidateQueries({ queryKey: ["sales"] });
+      void qc.invalidateQueries({ queryKey: ["commercial"] });
+      void qc.invalidateQueries({ queryKey: ["financials"] });
+      void qc.invalidateQueries({ queryKey: ["cmv-reconciliation", companyId] });
+      void qc.invalidateQueries({ queryKey: ["sales-import-preview", companyId] });
+      void qc.invalidateQueries({ queryKey: ["sales-replacement-preview", companyId] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Falha na operação transacional."),
+  });
+
   function downloadBackup() {
     if (!result || !result.hasExistingPeriod) return;
     // Local file only: no upload, public URL or storage in the repository.
@@ -160,9 +207,9 @@ export function SalesReplacementPreview({ companyId, report, fileName }: Props) 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="flex max-w-[560px] items-start gap-2 text-xs leading-5 text-muted-foreground">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                  A substituição atômica ainda não está habilitada. É necessário implantar e validar
-                  uma operação transacional com autorização, verificação de versão e recuperação.
-                  Nenhum lançamento será alterado nesta tela.
+                  {result.replacementEnabled
+                    ? "Homologação habilitada: uma substituição poderá ser executada somente após conferência e confirmação. O banco verificará a versão do mês dentro da transação."
+                    : "Substituição desativada neste ambiente. A transação deve ser implantada e testada em homologação antes de qualquer ativação; esta tela só permite comparar."}
                 </p>
                 {result.hasExistingPeriod && (
                   <Button type="button" size="sm" variant="outline" onClick={downloadBackup}>
@@ -171,6 +218,36 @@ export function SalesReplacementPreview({ companyId, report, fileName }: Props) 
                   </Button>
                 )}
               </div>
+              {result.replacementEnabled && (
+                <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  {result.hasExistingPeriod && (
+                    <label className="flex cursor-pointer items-start gap-2 text-xs leading-5">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={backupConfirmed}
+                        onChange={(e) => setBackupConfirmed(e.target.checked)}
+                      />
+                      Confirmei a exportação e conferência da cópia original deste mês.
+                    </label>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={mutation.isPending || query.isFetching || (result.hasExistingPeriod && !backupConfirmed)}
+                    onClick={() => {
+                      if (window.confirm(
+                        "CONFIRMAR HOMOLOGAÇÃO: substituir TODOS os vendedores do período " +
+                        report.periodStart + "?\n\nVariação no custo comercial: " +
+                        formatBRL(result.difference.costCents) +
+                        ".\nO banco exige autorização e rejeita versões desatualizadas."
+                      )) mutation.mutate();
+                    }}
+                  >
+                    {mutation.isPending ? "Substituindo em homologação…" : "Substituir relatório em homologação"}
+                  </Button>
+                </div>
+              )}
               {query.isFetching && <p role="status" className="text-xs text-muted-foreground">Atualizando comparação…</p>}
               <Button type="button" size="sm" variant="ghost" disabled={query.isFetching} onClick={() => void query.refetch()}>
                 <ArrowRightLeft className="mr-2 h-4 w-4" aria-hidden="true" />
