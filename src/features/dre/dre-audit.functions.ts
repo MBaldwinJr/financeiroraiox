@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
 import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
 import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit.domain";
+import { assertCompatibleAuditReassignment } from "./audit-reassignment.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -177,18 +178,22 @@ export const fillMissingCompetencia = createServerFn({ method: "POST" })
       .select("id, date")
       .eq("company_id", data.companyId)
       .in("id", data.transactionIds)
+      .is("deleted_at", null)
       .is("competencia", null);
     if (fetchErr) throw new Error(fetchErr.message);
 
     let updated = 0;
     for (const row of rows ?? []) {
-      const { error } = await context.supabase
+      const { data: changed, error } = await context.supabase
         .from("transactions")
         .update({ competencia: row.date })
         .eq("id", row.id)
-        .eq("company_id", data.companyId);
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .is("competencia", null)
+        .select("id");
       if (error) throw new Error(error.message);
-      updated += 1;
+      updated += changed?.length ?? 0;
     }
     return { updated };
   });
@@ -211,14 +216,31 @@ export const reassignCategory = createServerFn({ method: "POST" })
       .maybeSingle();
     if (catErr) throw new Error(catErr.message);
     if (!cat) throw new Error("Categoria não encontrada");
+    if (cat.kind !== "revenue" && cat.kind !== "expense") {
+      throw new Error("Tipo da categoria inválido para atribuição.");
+    }
 
-    const { error } = await context.supabase
+    // Verificar tudo antes de alterar qualquer lançamento, evitando trocas
+    // silenciosas entre receita/despesa e IDs de empresas diferentes.
+    const { data: rows, error: readErr } = await context.supabase
       .from("transactions")
-      .update({ category_id: data.categoryId, kind: cat.kind })
+      .select("id, kind")
       .eq("company_id", data.companyId)
+      .is("deleted_at", null)
       .in("id", data.transactionIds);
+    if (readErr) throw new Error(readErr.message);
+    assertCompatibleAuditReassignment(data.transactionIds, rows ?? [], cat.kind);
+
+    const { data: updatedRows, error } = await context.supabase
+      .from("transactions")
+      .update({ category_id: data.categoryId })
+      .eq("company_id", data.companyId)
+      .eq("kind", cat.kind)
+      .is("deleted_at", null)
+      .in("id", data.transactionIds)
+      .select("id");
     if (error) throw new Error(error.message);
-    return { updated: data.transactionIds.length };
+    return { updated: updatedRows?.length ?? 0 };
   });
 
 export const deleteBulkTransactions = createServerFn({ method: "POST" })
@@ -232,13 +254,15 @@ export const deleteBulkTransactions = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ context, data }) => {
-    const { error } = await context.supabase
+    const { data: changed, error } = await context.supabase
       .from("transactions")
       .update({ deleted_at: new Date().toISOString() })
       .eq("company_id", data.companyId)
-      .in("id", data.transactionIds);
+      .is("deleted_at", null)
+      .in("id", data.transactionIds)
+      .select("id");
     if (error) throw new Error(error.message);
-    return { updated: data.transactionIds.length };
+    return { updated: changed?.length ?? 0 };
   });
 
 export const purgeImportedTransactions = createServerFn({ method: "POST" })
