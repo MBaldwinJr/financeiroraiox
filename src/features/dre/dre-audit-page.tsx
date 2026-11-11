@@ -97,7 +97,7 @@ export function DreAuditPage() {
     setSelectedGroup(null);
   }, [companyId, year]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["dre-audit", companyId, year],
     enabled: Boolean(companyId),
     queryFn: () => fetchAudit({ data: { companyId: companyId!, year } }),
@@ -190,7 +190,15 @@ export function DreAuditPage() {
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Carregando auditoria…</p>}
+      {isLoading && <p role="status" className="text-sm text-muted-foreground">Carregando auditoria…</p>}
+      {isError && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+          <p className="text-sm text-destructive">Não foi possível carregar a Auditoria DRE: {error.message}</p>
+          <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
 
       {data && (
         <>
@@ -250,8 +258,9 @@ export function DreAuditPage() {
               <CardHeader className="space-y-2">
                 <CardTitle className="text-base">Categorias pendentes de enquadramento na DRE</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Total consolidado de todos os lançamentos analisados, não apenas os 500 exemplos abaixo.
-                  Categorias patrimoniais não aparecem nesta lista. Valores não devem ser corrigidos automaticamente.
+                  Totais de todos os lançamentos analisados, não apenas dos 500 exemplos abaixo.
+                  Clique em Investigar para ver grupos por descrição, valores e lançamentos.
+                  Os sinais não substituem documentação contábil. Nenhuma reclassificação é automática.
                 </p>
               </CardHeader>
               <CardContent>
