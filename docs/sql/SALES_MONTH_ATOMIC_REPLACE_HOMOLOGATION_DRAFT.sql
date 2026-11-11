@@ -34,16 +34,25 @@ revoke all on finance_internal.sales_month_revisions from public, anon, authenti
 create or replace function finance_internal.sales_month_version(
   p_company_id uuid, p_period_start date
 ) returns text
-language sql stable security definer set search_path = ''
-as $$
-  select pg_catalog.md5(
+language plpgsql stable security definer set search_path = ''
+as $
+begin
+  if auth.uid() is null or not exists (
+    select 1 from public.company_members m
+    where m.company_id=p_company_id and m.user_id=auth.uid()
+      and m.role::text in ('owner','admin')
+  ) then
+    raise exception 'Acesso negado à versão do relatório' using errcode='42501';
+  end if;
+  return pg_catalog.md5(
     coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.to_jsonb(s) order by s.id)::text
       from public.sales s
       where s.company_id = p_company_id and s.period_start = p_period_start
     ), '[]')
   );
-$$;
+end;
+$;
 revoke all on function finance_internal.sales_month_version(uuid,date) from public, anon, authenticated;
 grant execute on function finance_internal.sales_month_version(uuid,date) to authenticated;
 
