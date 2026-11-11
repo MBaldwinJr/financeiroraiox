@@ -6,6 +6,7 @@ import { useCompanyStore } from "@/stores/company-store";
 import { useFilterStore } from "@/stores/filter-store";
 import { financialFiltersKey, selectFinancialFilters } from "@/lib/financial-filters";
 import { getDreMatrix } from "@/features/dre/dre-engine/dre-engine.functions";
+import { CmvReconciliationSection } from "@/features/inventory/cmv-reconciliation-section";
 import { STORED_DRE_LINES, type StoredDreLine } from "@/features/dre/dre-line.functions";
 import { FilterBar } from "@/components/layout/filter-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,6 +114,7 @@ export function DrePage() {
           </TooltipProvider>
         </CardContent>
       </Card>
+      <CmvReconciliationSection companyId={companyId} year={range.year} />
     </div>
   );
 }
