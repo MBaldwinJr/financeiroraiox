@@ -128,12 +128,13 @@ export function DreAuditPage() {
   });
 
   const reassignMut = useMutation({
-    mutationFn: (payload: { ids: string[]; categoryId: string }) =>
+    mutationFn: (payload: { ids: string[]; categoryId: string; confirmToken: string }) =>
       reassign({
         data: {
           companyId: companyId!,
           transactionIds: payload.ids,
           categoryId: payload.categoryId,
+          confirmToken: payload.confirmToken,
         },
       }),
     onSuccess: (r) => {
@@ -389,7 +390,7 @@ export function DreAuditPage() {
                   categoryId={targetCategory}
                   selectedIds={selectedIds}
                   submitting={reassignMut.isPending}
-                  onApply={() => reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory })}
+                  onApply={(confirmToken) => reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory, confirmToken })}
                 />
               )}
               {data.issues.length === 0 ? (
