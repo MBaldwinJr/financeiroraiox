@@ -1,12 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/app-shell";
 import { InventorySection } from "@/features/inventory/inventory-section";
+import { useCompanyStore } from "@/stores/company-store";
+import { useFilterStore } from "@/stores/filter-store";
+import { CmvReconciliationSection } from "@/features/inventory/cmv-reconciliation-section";
 
 export const Route = createFileRoute("/_authenticated/estoque")({
   head: () => ({
     meta: [{ title: "Estoque — Finance Vision Pro" }],
   }),
-  component: () => (
+  component: () => <EstoquePage />,
+});
+
+function EstoquePage() {
+  const companyId = useCompanyStore((s) => s.activeCompanyId);
+  const year = useFilterStore((s) => s.range.year);
+  return (
     <AppShell>
       <div className="space-y-6">
         <header>
@@ -16,7 +25,8 @@ export const Route = createFileRoute("/_authenticated/estoque")({
           </p>
         </header>
         <InventorySection />
+        {companyId && <CmvReconciliationSection companyId={companyId} year={year} />}
       </div>
     </AppShell>
-  ),
-});
+  );
+}
