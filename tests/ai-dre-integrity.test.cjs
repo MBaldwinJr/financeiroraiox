@@ -17,8 +17,10 @@ function load(relative, importer = require) {
   return mod.exports;
 }
 const dreEngine = load("dre/dre-engine/dre-engine.domain.ts");
+const reviewSignals = load("dre/dre-review-signals.domain.ts");
 const { summarizeClassificationGaps } = load("dre/dre-audit.domain.ts", (specifier) => {
   if (specifier === "@/features/dre/dre-engine/dre-engine.domain") return dreEngine;
+  if (specifier === "./dre-review-signals.domain") return reviewSignals;
   throw new Error("Unexpected import: " + specifier);
 });
 const { buildFinanceAIContext } = load("ai-copilot/financial-context.domain.ts");
@@ -105,4 +107,21 @@ test("auditoria soma todas as linhas de categoria não mapeada e separa receita 
   assert.equal(summaries[1].revenueCents, 4000);
   assert.equal(summaries[1].expenseCents, 2000);
   assert.equal(summaries[1].count, 2);
+});
+
+test("grupos de classificação pendente trazem triagem sem perda de valores", () => {
+  const rows = [
+    { description: "Rotativo", kind: "expense", amount_cents: 10000,
+      category: { id: "g", name: "Outras", dre_line: "nao_aplicavel", is_balance_sheet: false } },
+    { description: "Tarifas", kind: "expense", amount_cents: 2200,
+      category: { id: "g", name: "Outras", dre_line: "nao_aplicavel", is_balance_sheet: false } },
+    { description: "Rotativo", kind: "expense", amount_cents: 4000,
+      category: { id: "g", name: "Outras", dre_line: "nao_aplicavel", is_balance_sheet: true } },
+  ];
+  const groups = summarizeClassificationGaps(rows);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].count, 2);
+  assert.equal(groups[0].expenseCents, 12200);
+  assert.equal(groups[0].reviewSignals.reduce((total, item) => total + item.expenseCents, 0), 12200);
+  assert.equal(groups[0].reviewSignals.find((item) => item.signal === "credit_operations").expenseCents, 10000);
 });
