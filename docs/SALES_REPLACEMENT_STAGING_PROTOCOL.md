@@ -15,9 +15,10 @@ As duas variáveis do servidor devem ser configuradas na **instância de homolog
 ```text
 SALES_ATOMIC_REPLACEMENT_ENABLED=true
 SALES_REPLACEMENT_ENV=homologation
+SALES_REPLACEMENT_STAGING_SUPABASE_URL=https://<URL-real-do-projeto-de-homologacao>
 ```
 
-Ausência de qualquer uma mantém a alteração desligada. Não configurar essas variáveis em produção. A interface só oferece o botão de substituição após a RPC de versão retornar um fingerprint válido. O servidor reconsulta os registros da mesma empresa e compara a prévia; o Postgres revalida outra versão **dentro da transação**.
+Ausência de qualquer uma mantém a alteração desligada. O servidor ainda exige que a URL Supabase efetivamente conectada (`SUPABASE_URL`) corresponda exatamente à URL autorizada para homologação, usando HTTPS. Não copiar a URL do banco de produção para essa variável. Não configurar essas variáveis em produção. A interface só oferece o botão de substituição após a RPC de versão retornar um fingerprint válido. O servidor reconsulta os registros da mesma empresa e compara a prévia; o Postgres revalida outra versão **dentro da transação**.
 
 A chave `snapshotToken` da prévia e o `databaseVersion` (MD5 de todas as linhas do mês, inclusive excluídas logicamente) são controles distintos. Nenhum deles substitui a autorização.
 
