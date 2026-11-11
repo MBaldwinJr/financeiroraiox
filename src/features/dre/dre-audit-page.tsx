@@ -104,6 +104,8 @@ export function DreAuditPage() {
     queryKey: ["dre-audit", companyId, year],
     enabled: Boolean(companyId),
     queryFn: () => fetchAudit({ data: { companyId: companyId!, year } }),
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
   });
 
   const permissionQuery = useQuery({
