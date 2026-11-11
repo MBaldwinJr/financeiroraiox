@@ -1,5 +1,6 @@
 import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { assessSalesImport } from "./sales-import-integrity.domain";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -121,12 +122,15 @@ export async function parseSalesPdf(file: File): Promise<ParsedSalesReport> {
     });
   }
 
-  if (!periodStart) {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0");
-    periodStart = `${yyyy}-${mm}-01`;
-    periodEnd = `${yyyy}-${mm}-28`;
+  if (!periodStart || !periodEnd) {
+    throw new Error(
+      "Não foi possível identificar o período do relatório no PDF. A importação foi cancelada para evitar lançamentos no mês errado.",
+    );
+  }
+
+  const check = assessSalesImport(periodStart, periodEnd, rows);
+  if (check.errors.length) {
+    throw new Error(check.errors.join(" "));
   }
 
   const totals = rows.reduce(

@@ -1,8 +1,13 @@
+import { normalizedSellerKey } from "@/features/sales/sales-import-integrity.domain";
+
 /** Cross-check only; matching costs is not a certified accounting reconciliation. */
 export interface ErpCostRow {
   period_start: string;
   period_end: string;
   cost_cents: number;
+  seller_name?: string | null;
+  seller_code?: string | null;
+  source_file?: string | null;
 }
 
 export interface InventoryCostSnapshot {
@@ -14,6 +19,7 @@ export type CmvCheckStatus =
   | "missing_pdf"
   | "missing_dre"
   | "partial_period"
+  | "duplicate_sellers"
   | "investigate"
   | "cent_difference"
   | "totals_equal";
@@ -24,6 +30,10 @@ export interface CmvMonthComparison {
   dreEntryCount: number;
   importedCostCents: number | null;
   importedRows: number;
+  missingSellerCodes: number;
+  duplicateSellerRows: number;
+  sourceFileCount: number;
+  untrackedSourceRows: number;
   differenceCents: number | null;
   reportCoversCalendarMonth: boolean;
   inventoryClosingSnapshotDate: string | null;
@@ -75,6 +85,17 @@ export function reconcileCmvSources(
     const importedCostCents = importedRows
       ? monthSales.reduce((total, row) => total + row.cost_cents, 0)
       : null;
+    const missingSellerCodes = monthSales.filter((row) =>
+      !row.seller_code?.trim(),
+    ).length;
+    const sellerKeys = monthSales
+      .map((row) => normalizedSellerKey(row.seller_name ?? ""))
+      .filter(Boolean);
+    const duplicateSellerRows = sellerKeys.length - new Set(sellerKeys).size;
+    const sourceFileCount = new Set(
+      monthSales.map((row) => row.source_file?.trim()).filter(Boolean),
+    ).size;
+    const untrackedSourceRows = monthSales.filter((row) => !row.source_file?.trim()).length;
     const dreCostCents = dreCostMonthly[index];
     const dreEntryCount = dreEntryCounts[index];
     const differenceCents = importedCostCents == null
@@ -94,13 +115,15 @@ export function reconcileCmvSources(
     if (importedRows === 0) status = "missing_pdf";
     else if (dreEntryCount === 0) status = "missing_dre";
     else if (!reportCoversCalendarMonth) status = "partial_period";
+    else if (duplicateSellerRows > 0) status = "duplicate_sellers";
     else if (differenceCents === 0) status = "totals_equal";
     else if (differenceCents != null && Math.abs(differenceCents) <= 2) status = "cent_difference";
     else status = "investigate";
 
     return {
       month, dreCostCents, dreEntryCount,
-      importedCostCents, importedRows,
+      importedCostCents, importedRows, missingSellerCodes,
+      duplicateSellerRows, sourceFileCount, untrackedSourceRows,
       differenceCents, reportCoversCalendarMonth,
       inventoryClosingSnapshotDate, latestInventorySnapshotDate, status,
     };
@@ -110,7 +133,8 @@ export function reconcileCmvSources(
     year,
     monthly,
     comparableMonths: monthly.filter((row) =>
-      row.importedCostCents !== null && row.dreEntryCount > 0 && row.reportCoversCalendarMonth,
+      row.importedCostCents !== null && row.dreEntryCount > 0
+      && row.reportCoversCalendarMonth && row.duplicateSellerRows === 0,
     ).length,
     flaggedMonths: monthly.filter((row) => row.status === "investigate").length,
     missingPdfMonths: monthly.filter((row) => row.status === "missing_pdf").length,

@@ -36,6 +36,16 @@
 - Giro e cobertura continuam **estimativas**, pois não há garantia de fechamentos físicos mensais nem de qualidade dos custos de estoque.
 - Importações novas de PDFs e mudanças nos snapshots invalidam o cache da reconciliação por empresa.
 
+## Integridade dos PDFs e reimportação
+
+- O leitor de PDF **não presume mais a competência** caso a data do relatório não seja identificada. A importação é recusada.
+- O backend valida datas reais, não aceita competência atravessando meses, nem nomes repetidos após normalizar maiúsculas, espaços e acentos.
+- Antes de reimportar um mês, uma consulta autenticada compara **somente as identidades** do PDF com os registros ativos existentes. Se um vendedor antigo não está no novo arquivo, se a grafia é diferente, se existem duplicações antigas ou períodos finais incompatíveis, a reimportação é **bloqueada**. O usuário precisa revisar o período e seguir o fluxo controlado de substituição; o sistema não apaga lançamentos.
+- A interface mostra apenas quantidades e alertas de integridade; não revela nomes ou relatórios de outras empresas. As mesmas verificações são repetidas no servidor na operação efetiva.
+- Na conciliação CMV × vendas, cada mês apresenta quantidade de registros, vendedores sem código, nomes duplicados, quantidade de arquivos de origem e entradas sem arquivo. Quando há duplicação de vendedores, mesmo custos exatamente iguais **não** são marcados como fonte comparável.
+- Ausência de código é um alerta de rastreabilidade, não uma prova de erro. Quantidade de arquivos e datas declaradas também não garantem completude do relatório.
+- Essas verificações não fornecem controle transacional completo entre leitura e escrita; concorrência simultânea de importações exigiria proteção adicional no banco. A política RLS atual também requer homologação independente antes de alegar autorização plena.
+
 ## Critérios para revisão documental
 
 1. Priorizar meses cujo custo do PDF e CMV da DRE diferem de forma material, especialmente quando o PDF cobre o mês civil completo.

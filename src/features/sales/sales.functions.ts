@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchAllRows } from "@/lib/supabase-paginate";
+import { assessSalesImport, assessSalesReimport } from "./sales-import-integrity.domain";
 
 const ListSchema = z.object({
   companyId: z.string().uuid(),
@@ -83,10 +84,71 @@ export const listSales = createServerFn({ method: "POST" })
     return { rows: filtered, monthly };
   });
 
+interface ExistingSaleIdentity {
+  seller_name: string;
+  period_end: string;
+}
+
+/**
+ * Checks existing active seller rows for an EXACT period_start in this company,
+ * preserving RLS. No external names are returned by preflight.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchExistingSaleIdentities(supabase: any, companyId: string, periodStart: string) {
+  const rows = await fetchAllRows<ExistingSaleIdentity>((from, to) =>
+    supabase
+      .from("sales")
+      .select("seller_name, period_end")
+      .eq("company_id", companyId)
+      .eq("period_start", periodStart)
+      .is("deleted_at", null)
+      .order("seller_name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to) as PromiseLike<{
+        data: ExistingSaleIdentity[] | null;
+        error: { message: string } | null;
+      }>,
+  );
+  return rows.map((row) => ({ sellerName: row.seller_name, periodEnd: row.period_end }));
+}
+
+export const inspectSalesImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ImportSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    const integrity = assessSalesImport(data.periodStart, data.periodEnd, data.rows);
+    const existing = await fetchExistingSaleIdentities(
+      context.supabase, data.companyId, data.periodStart,
+    );
+    const match = assessSalesReimport(existing, data.rows, data.periodEnd);
+    return {
+      ...match,
+      validationErrors: integrity.errors,
+      validationWarnings: integrity.warnings,
+      blocked: match.blocked || integrity.errors.length > 0,
+    };
+  });
+
 export const importSales = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImportSchema.parse(input))
   .handler(async ({ context, data }) => {
+    const integrity = assessSalesImport(data.periodStart, data.periodEnd, data.rows);
+    if (integrity.errors.length) {
+      throw new Error(integrity.errors.join(" "));
+    }
+
+    const existing = await fetchExistingSaleIdentities(
+      context.supabase, data.companyId, data.periodStart,
+    );
+    const match = assessSalesReimport(existing, data.rows, data.periodEnd);
+    if (match.blocked) {
+      throw new Error(
+        "Este período contém registros antigos que poderiam ficar duplicados ou misturados. " +
+        "Revise o relatório anterior e substitua o período de forma controlada antes de importar.",
+      );
+    }
+
     const payload = data.rows.map((r) => ({
       company_id: data.companyId,
       period_start: data.periodStart,
