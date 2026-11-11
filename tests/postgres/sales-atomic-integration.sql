@@ -28,7 +28,7 @@ from result \gset
 select set_config('test.revision_id',:'revision_id',false);
 select set_config('test.replacement_version',:'replacement_version',false);
 
-do $$
+do $testblock1$
 begin
   if (select count(*) from public.sales
       where company_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -44,7 +44,7 @@ begin
       where company_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb') <> 0 then
     raise exception 'RLS leaked other company';
   end if;
-end $$;
+end $testblock1$;
 
 -- Repeated request with same payload must be idempotent.
 with result as (
@@ -61,7 +61,7 @@ with result as (
 select payload->>'replayed' as replay_result from result \gset
 select set_config('test.replayed',:'replay_result',false);
 
-do $
+do $testblock2$
 begin
   if current_setting('test.replayed') <> 'true' then
     raise exception 'Idempotent request was not replayed';
@@ -69,10 +69,10 @@ begin
   if current_setting('test.initial_version') = current_setting('test.replacement_version') then
     raise exception 'Version should change after replacement';
   end if;
-end $$;
+end $testblock2$;
 
 -- Old version, new request: serialization failure, with no partial mutation.
-do $$
+do $testblock3$
 begin
   begin
     perform public.sales_month_commit(
@@ -85,11 +85,11 @@ begin
     raise exception 'Expected stale fingerprint to be rejected';
   exception when serialization_failure then null;
   end;
-end $$;
+end $testblock3$;
 
 -- Simulate failure AFTER DELETE by triggering an INSERT error.
 -- The original current month must survive the rollback intact.
-do $$
+do $testblock4$
 begin
   begin
     perform public.sales_month_commit(
@@ -115,10 +115,10 @@ begin
       and period_start='2026-05-01') <> 138000 then
     raise exception 'Failed transaction changed cost';
   end if;
-end $$;
+end $testblock4$;
 
 -- Direct mutations must be blocked even for authenticated owners.
-do $$
+do $testblock5$
 begin
   begin
     update public.sales set cost_cents=1
@@ -132,7 +132,7 @@ begin
     raise exception 'Direct DELETE unexpectedly allowed';
   exception when insufficient_privilege then null;
   end;
-end $$;
+end $testblock5$;
 
 -- Restore full original version, not merely the totals.
 with result as (
@@ -147,7 +147,7 @@ select payload->>'version' as restored_version,
 from result \gset
 select set_config('test.restored_version',:'restored_version',false);
 
-do $
+do $testblock6$
 begin
   if (select count(*) from public.sales
       where company_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -162,10 +162,10 @@ begin
   if current_setting('test.initial_version')<>current_setting('test.restored_version') then
     raise exception 'Restore must recover identical original fingerprint';
   end if;
-end $$;
+end $testblock6$;
 
 -- Cannot restore an outdated revision twice with a new request.
-do $$
+do $testblock7$
 begin
   begin
     perform public.sales_month_restore(
@@ -177,11 +177,11 @@ begin
     raise exception 'Expected stale restore to be rejected';
   exception when serialization_failure then null;
   end;
-end $$;
+end $testblock7$;
 
 -- Member: authenticated but not owner/admin.
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
-do $$
+do $testblock8$
 begin
   begin
     perform public.sales_month_commit(
@@ -194,24 +194,24 @@ begin
     raise exception 'Member unexpectedly wrote sales';
   exception when insufficient_privilege then null;
   end;
-end $$;
+end $testblock8$;
 
 -- Admin may view the version, unrelated owner cannot.
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 select public.sales_month_version('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','2026-05-01')
   as admin_verified_version;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',false);
-do $$
+do $testblock9$
 begin
   begin
     perform public.sales_month_version('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','2026-05-01');
     raise exception 'Another company accessed version';
   exception when insufficient_privilege then null;
   end;
-end $$;
+end $testblock9$;
 
 reset role;
-do $$
+do $testblock10$
 begin
   if (select count(*) from finance_internal.sales_month_revisions where action='replace')<>1 then
     raise exception 'Expected one replacement revision';
@@ -223,4 +223,4 @@ begin
       where company_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')<>1 then
     raise exception 'Unrelated company changed';
   end if;
-end $$;
+end $testblock10$;
