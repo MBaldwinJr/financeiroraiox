@@ -15,22 +15,28 @@ const mod = { exports: {} };
 new Function("module", "exports", transpiled)(mod, mod.exports);
 const { canRunSalesReplacementInStaging, assertSalesReplacementInStaging, isSalesMonthDatabaseVersion } = mod.exports;
 
+const stagingUrl = "https://staging-project.supabase.co/";
+const prodUrl = "https://production-project.supabase.co/";
+
 test("substituição fica desligada por padrão", () => {
   assert.equal(canRunSalesReplacementInStaging(undefined, undefined), false);
-  assert.equal(canRunSalesReplacementInStaging("false", "homologation"), false);
-  assert.equal(canRunSalesReplacementInStaging("true", undefined), false);
-  assert.equal(canRunSalesReplacementInStaging("true", "production"), false);
-  assert.equal(canRunSalesReplacementInStaging("TRUE", "homologation"), false);
+  assert.equal(canRunSalesReplacementInStaging("false", "homologation", stagingUrl, stagingUrl), false);
+  assert.equal(canRunSalesReplacementInStaging("true", undefined, stagingUrl, stagingUrl), false);
+  assert.equal(canRunSalesReplacementInStaging("true", "production", stagingUrl, stagingUrl), false);
+  assert.equal(canRunSalesReplacementInStaging("TRUE", "homologation", stagingUrl, stagingUrl), false);
+  assert.equal(canRunSalesReplacementInStaging("true", "homologation", stagingUrl, undefined), false);
+  assert.equal(canRunSalesReplacementInStaging("true", "homologation", prodUrl, stagingUrl), false);
+  assert.equal(canRunSalesReplacementInStaging("true", "homologation", "http://staging-project.supabase.co/", stagingUrl), false);
 });
 
-test("somente as DUAS configurações explícitas habilitam a homologação", () => {
-  assert.equal(canRunSalesReplacementInStaging("true", "homologation"), true);
-  assert.doesNotThrow(() => assertSalesReplacementInStaging("true", "homologation"));
+test("flags e URL exata precisam apontar para o banco de homologação", () => {
+  assert.equal(canRunSalesReplacementInStaging("true", "homologation", stagingUrl, stagingUrl), true);
+  assert.doesNotThrow(() => assertSalesReplacementInStaging("true", "homologation", stagingUrl, stagingUrl));
   assert.throws(
-    () => assertSalesReplacementInStaging("true", "production"),
+    () => assertSalesReplacementInStaging("true", "production", stagingUrl, stagingUrl),
     /Substituição transacional desativada/,
   );
-  assert.throws(() => assertSalesReplacementInStaging(undefined, "homologation"), /desativada/);
+  assert.throws(() => assertSalesReplacementInStaging("true", "homologation", prodUrl, stagingUrl), /desativada/);
 });
 
 test("versão do banco precisa ser md5 de linhas do mês, não token da prévia", () => {
