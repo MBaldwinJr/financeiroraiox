@@ -35,6 +35,7 @@ import { formatBRL } from "@/lib/money";
 import { listCategories } from "@/features/catalog/catalog.functions";
 import type { ClassificationGap } from "./dre-audit.domain";
 import { ClassificationGapDetails } from "./classification-gap-details";
+import { AuditReassignmentPreview } from "./audit-reassignment-preview";
 import {
   fillMissingCompetencia,
   getDreAudit,
@@ -127,12 +128,13 @@ export function DreAuditPage() {
   });
 
   const reassignMut = useMutation({
-    mutationFn: (payload: { ids: string[]; categoryId: string }) =>
+    mutationFn: (payload: { ids: string[]; categoryId: string; confirmToken: string }) =>
       reassign({
         data: {
           companyId: companyId!,
           transactionIds: payload.ids,
           categoryId: payload.categoryId,
+          confirmToken: payload.confirmToken,
         },
       }),
     onSuccess: (r) => {
@@ -362,24 +364,6 @@ export function DreAuditPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  size="sm"
-                  disabled={
-                    !targetCategory || !selectedKind || selectedIds.length === 0 || reassignMut.isPending
-                  }
-                  onClick={() => {
-                    const chosen = categories.find((item) => item.id === targetCategory);
-                    if (!chosen) {
-                      toast.error("Selecione uma categoria válida.");
-                      return;
-                    }
-                    if (confirm(`Reatribuir ${selectedIds.length} lançamento(s) para "${chosen.name}"? A categoria deve ter o mesmo tipo (receita/despesa) dos lançamentos. Esta ação altera os relatórios financeiros. Confirme somente após revisar os documentos.`)) {
-                      reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory });
-                    }
-                  }}
-                >
-                  Aplicar categoria
-                </Button>
                 {selectedIds.length > 0 && !selectedKind && (
                   <span className="text-xs text-amber-600">
                     Para reclassificar, selecione apenas receitas ou apenas despesas.
@@ -399,7 +383,16 @@ export function DreAuditPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {selectedIds.length > 0 && selectedKind && targetCategory && companyId && (
+                <AuditReassignmentPreview
+                  companyId={companyId}
+                  categoryId={targetCategory}
+                  selectedIds={selectedIds}
+                  submitting={reassignMut.isPending}
+                  onApply={(confirmToken) => reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory, confirmToken })}
+                />
+              )}
               {data.issues.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Nenhuma inconsistência encontrada no período.
