@@ -39,6 +39,7 @@ import { AuditReassignmentPreview } from "./audit-reassignment-preview";
 import {
   fillMissingCompetencia,
   getDreAudit,
+  getDreAuditMutationAccess,
   reassignCategory,
   deleteBulkTransactions,
   type DreAuditIssue,
@@ -82,6 +83,7 @@ export function DreAuditPage() {
   const range = useFilterStore((s) => s.range);
   const year = useMemo(() => range.year, [range.year]);
   const fetchAudit = useServerFn(getDreAudit);
+  const fetchMutationAccess = useServerFn(getDreAuditMutationAccess);
   const fetchCategories = useServerFn(listCategories);
   const fillCompetencia = useServerFn(fillMissingCompetencia);
   const reassign = useServerFn(reassignCategory);
@@ -103,6 +105,14 @@ export function DreAuditPage() {
     enabled: Boolean(companyId),
     queryFn: () => fetchAudit({ data: { companyId: companyId!, year } }),
   });
+
+  const permissionQuery = useQuery({
+    queryKey: ["dre-audit-mutation-access", companyId],
+    enabled: Boolean(companyId),
+    queryFn: () => fetchMutationAccess({ data: { companyId: companyId! } }),
+  });
+  // Falha ao consultar permissões nunca habilita operações de escrita.
+  const canMutate = permissionQuery.data?.canMutate === true;
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories", companyId],
@@ -205,6 +215,16 @@ export function DreAuditPage() {
         </p>
       </div>
 
+      {permissionQuery.isSuccess && !canMutate && (
+        <p role="status" className="rounded-xl border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          Visualização somente de leitura. Ações financeiras sensíveis exigem perfil proprietário ou administrador.
+        </p>
+      )}
+      {permissionQuery.isError && (
+        <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+          Não foi possível validar sua permissão. As ações de alteração estão bloqueadas.
+        </p>
+      )}
       {isLoading && <p role="status" className="text-sm text-muted-foreground">Carregando auditoria…</p>}
       {isError && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
@@ -342,7 +362,7 @@ export function DreAuditPage() {
                   size="sm"
                   variant="outline"
                   disabled={
-                    selectedMissingCompetencia.length === 0 || fillMut.isPending
+                    !canMutate || selectedMissingCompetencia.length === 0 || fillMut.isPending
                   }
                   onClick={() => {
                     if (confirm(`Preencher a competência de ${selectedMissingCompetencia.length} lançamento(s) usando a data do registro? Isso pode afetar a DRE. Confirme apenas após verificar que as datas correspondem ao fato gerador.`)) {
@@ -352,7 +372,7 @@ export function DreAuditPage() {
                 >
                   Preencher competência = data ({selectedMissingCompetencia.length})
                 </Button>
-                <Select value={targetCategory} onValueChange={setTargetCategory} disabled={!selectedKind}>
+                <Select value={targetCategory} onValueChange={setTargetCategory} disabled={!canMutate || !selectedKind}>
                   <SelectTrigger className="h-9 w-[220px]">
                     <SelectValue placeholder="Reatribuir categoria…" />
                   </SelectTrigger>
@@ -372,7 +392,7 @@ export function DreAuditPage() {
                 <Button
                   size="sm"
                   variant="destructive"
-                  disabled={selectedIds.length === 0 || deleteMut.isPending}
+                  disabled={!canMutate || selectedIds.length === 0 || deleteMut.isPending}
                   onClick={() => {
                     if (confirm(`Deseja marcar como excluídos os ${selectedIds.length} lançamentos selecionados? Os registros não serão apagados fisicamente.`)) {
                       deleteMut.mutate(selectedIds);
@@ -384,7 +404,7 @@ export function DreAuditPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedIds.length > 0 && selectedKind && targetCategory && companyId && (
+              {canMutate && selectedIds.length > 0 && selectedKind && targetCategory && companyId && (
                 <AuditReassignmentPreview
                   companyId={companyId}
                   categoryId={targetCategory}
@@ -406,6 +426,7 @@ export function DreAuditPage() {
                           checked={allSelected}
                           onCheckedChange={toggleAll}
                           aria-label="Selecionar todos"
+                          disabled={!canMutate}
                         />
                       </TableHead>
                       <TableHead>Data</TableHead>
@@ -423,6 +444,7 @@ export function DreAuditPage() {
                           <Checkbox
                             checked={selected.has(issue.id)}
                             onCheckedChange={() => toggle(issue.id)}
+                            disabled={!canMutate}
                             aria-label="Selecionar linha"
                           />
                         </TableCell>
