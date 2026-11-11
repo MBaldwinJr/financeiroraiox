@@ -5,11 +5,10 @@ set -euo pipefail
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-psql -X -v ON_ERROR_STOP=1 <<'SQL' >"$tmp/base.log"
+psql -X -At -v ON_ERROR_STOP=1 <<'SQL' >"$tmp/base.log"
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
-select public.sales_month_version('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','2026-06-01') as version \gset
-select :'version' as version;
+select public.sales_month_version('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','2026-06-01');
 SQL
 initial="$(tail -n 1 "$tmp/base.log" | tr -d '[:space:]')"
 if [[ ! "$initial" =~ ^[a-f0-9]{32}$ ]]; then
