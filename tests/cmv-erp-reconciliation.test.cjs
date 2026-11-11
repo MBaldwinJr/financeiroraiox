@@ -12,7 +12,18 @@ const js = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const mod = { exports: {} };
-new Function("require", "module", "exports", js)(require, mod, mod.exports);
+const salesSource = fs.readFileSync(
+  path.join(__dirname, "..", "src", "features", "sales", "sales-import-integrity.domain.ts"), "utf8",
+);
+const salesJs = ts.transpileModule(salesSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const salesModule = { exports: {} };
+new Function("require", "module", "exports", salesJs)(require, salesModule, salesModule.exports);
+new Function("require", "module", "exports", js)((specifier) => {
+  if (specifier === "@/features/sales/sales-import-integrity.domain") return salesModule.exports;
+  return require(specifier);
+}, mod, mod.exports);
 const { reconcileCmvSources } = mod.exports;
 
 const costs = Array(12).fill(0);
@@ -93,4 +104,34 @@ test("fevereiro bissexto exige dia correto e dados de outros anos não contam", 
 
 test("rejeita série parcial para não produzir totais comparativos incorretos", () => {
   assert.throws(() => reconcileCmvSources(2026, [1, 2], [], [], []), /doze competências/);
+});
+
+
+test("mesmo vendedor repetido com acentos diferentes bloqueia equivalência aparente", () => {
+  const cmv = [...costs], count = [...entries]; cmv[4] = 20000; count[4] = 1;
+  const rows = [
+    { ...sale("2026-05-01", "2026-05-31", 10000), seller_name: "João Teste", seller_code: null, source_file: "teste-A.pdf" },
+    { ...sale("2026-05-01", "2026-05-31", 10000), seller_name: "JOAO TESTE", seller_code: null, source_file: "teste-B.pdf" },
+  ];
+  const report = reconcileCmvSources(2026, cmv, count, rows, []);
+  const may = report.monthly[4];
+  assert.equal(may.differenceCents, 0);
+  assert.equal(may.status, "duplicate_sellers");
+  assert.equal(may.duplicateSellerRows, 1);
+  assert.equal(may.missingSellerCodes, 2);
+  assert.equal(may.sourceFileCount, 2);
+  assert.equal(report.comparableMonths, 0);
+});
+
+test("dados sem código ou arquivo de origem recebem aviso sem alterar custos", () => {
+  const cmv = [...costs], count = [...entries]; cmv[7] = 90000; count[7] = 1;
+  const report = reconcileCmvSources(2026, cmv, count, [
+    { ...sale("2026-08-01", "2026-08-31", 90000), seller_name: "Vendedor Teste", seller_code: null, source_file: null },
+  ], []);
+  const aug = report.monthly[7];
+  assert.equal(aug.status, "totals_equal");
+  assert.equal(aug.importedCostCents, 90000);
+  assert.equal(aug.missingSellerCodes, 1);
+  assert.equal(aug.sourceFileCount, 0);
+  assert.equal(aug.untrackedSourceRows, 1);
 });
