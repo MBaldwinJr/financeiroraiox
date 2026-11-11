@@ -62,3 +62,11 @@ test("texto de revisão não recomenda classificação automática", () => {
 test("coleções vazias não inventam valores", () => {
   assert.deepEqual(summarizeReviewSignals([]), []);
 });
+
+test("cada tipo de sinal exige documentação antes de qualquer classificação", () => {
+  for (const signal of ["credit_operations", "fees", "returns", "barter", "unresolved"]) {
+    const item = reviewSignalInfo(signal);
+    assert.ok(item.evidenceToCheck.length >= 3);
+    assert.ok(item.evidenceToCheck.every((document) => typeof document === "string" && document.length > 8));
+  }
+});
