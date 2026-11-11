@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,6 +26,7 @@ const labels = {
 export function SalesReplacementPreview({ companyId, report, fileName }: Props) {
   const [open, setOpen] = useState(false);
   const [backupConfirmed, setBackupConfirmed] = useState(false);
+  const requestIdRef = useRef<string | null>(null);
   const qc = useQueryClient();
   const fetcher = useServerFn(previewSalesReplacement);
   const commit = useServerFn(commitSalesReplacement);
@@ -47,6 +48,13 @@ export function SalesReplacementPreview({ companyId, report, fileName }: Props) 
   });
 
   const result = query.data;
+  // Never reuse a backup approval or idempotency key after switching a month,
+  // company or preview version.
+  useEffect(() => {
+    setBackupConfirmed(false);
+    requestIdRef.current = null;
+  }, [companyId, report.periodStart, report.periodEnd, result?.snapshotToken]);
+
   const mutation = useMutation({
     mutationFn: async () => {
       if (!result?.replacementEnabled || !result.databaseVersion || query.isFetching) {
@@ -64,11 +72,12 @@ export function SalesReplacementPreview({ companyId, report, fileName }: Props) 
           rows: report.rows.map((row) => ({ ...row })),
           expectedDatabaseVersion: result.databaseVersion,
           previewToken: result.snapshotToken,
-          requestId: crypto.randomUUID(),
+          requestId: (requestIdRef.current ??= crypto.randomUUID()),
         },
       });
     },
     onSuccess: ({ saved }) => {
+      requestIdRef.current = null;
       toast.success(`Substituição transacional concluída em homologação: ${saved} vendedores.`);
       setBackupConfirmed(false);
       void qc.invalidateQueries({ queryKey: ["sales"] });
