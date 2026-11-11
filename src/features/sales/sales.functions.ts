@@ -38,6 +38,20 @@ const ImportSchema = z.object({
   rows: z.array(RowSchema).min(1),
 });
 
+const AtomicRestoreSchema = z.object({
+  companyId: z.string().uuid(),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  revisionId: z.string().uuid(),
+  expectedDatabaseVersion: z.string().regex(/^[a-f0-9]{32}$/),
+  requestId: z.string().uuid(),
+});
+
+const RestoreRpcResultSchema = z.object({
+  revisionId: z.string().uuid(),
+  version: z.string().regex(/^[a-f0-9]{32}$/),
+  replayed: z.boolean(),
+});
+
 const AtomicCommitSchema = ImportSchema.extend({
   expectedDatabaseVersion: z.string().regex(/^[a-f0-9]{32}$/),
   previewToken: z.string().regex(/^[a-f0-9]{64}$/),
@@ -282,6 +296,34 @@ export const commitSalesReplacement = createServerFn({ method: "POST" })
     );
     if (error) throw new Error("Falha na substituição transacional: " + error.message);
     return RpcResultSchema.parse(result);
+  });
+
+/**
+ * No UI activation. For supervised HOMOLOGATION-only recovery after the
+ * proposed Postgres RPC is installed and tested with synthetic data.
+ * All restoration logic, checks and audit entries belong to one DB transaction.
+ */
+export const restoreSalesPeriodInStaging = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => AtomicRestoreSchema.parse(input))
+  .handler(async ({ context, data }) => {
+    assertSalesReplacementInStaging(
+      process.env.SALES_ATOMIC_REPLACEMENT_ENABLED,
+      process.env.SALES_REPLACEMENT_ENV,
+    );
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
+    const { data: result, error } = await atomicRpc(context.supabase).rpc(
+      "sales_month_restore",
+      {
+        p_company_id: data.companyId,
+        p_period_start: data.periodStart,
+        p_revision_id: data.revisionId,
+        p_expected_version: data.expectedDatabaseVersion,
+        p_request_id: data.requestId,
+      },
+    );
+    if (error) throw new Error("Restauração de homologação recusada: " + error.message);
+    return RestoreRpcResultSchema.parse(result);
   });
 
 export const importSales = createServerFn({ method: "POST" })
