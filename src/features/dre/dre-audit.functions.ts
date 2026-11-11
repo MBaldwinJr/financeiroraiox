@@ -5,6 +5,7 @@ import { fetchAllRows } from "@/lib/supabase-paginate";
 import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
 import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit.domain";
 import { assertCompatibleAuditReassignment } from "./audit-reassignment.domain";
+import { previewReassignmentImpact } from "./audit-reassignment-preview.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -203,6 +204,48 @@ const ReassignCategoryInput = z.object({
   transactionIds: z.array(z.string().uuid()).min(1).max(1000),
   categoryId: z.string().uuid(),
 });
+
+/**
+ * Prévia SOMENTE DE LEITURA. Reutiliza as validações do endpoint de atualização
+ * e o próprio motor da DRE. Os valores representam apenas os itens selecionados.
+ */
+export const getAuditReassignmentPreview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ReassignCategoryInput.parse(input))
+  .handler(async ({ context, data }) => {
+    const [categoryResult, transactionsResult] = await Promise.all([
+      context.supabase
+        .from("categories")
+        .select("id, name, kind, dre_line, is_balance_sheet")
+        .eq("company_id", data.companyId)
+        .eq("id", data.categoryId)
+        .maybeSingle(),
+      context.supabase
+        .from("transactions")
+        .select(
+          "id, kind, competencia, amount_cents, category:categories(dre_line, is_balance_sheet)",
+        )
+        .eq("company_id", data.companyId)
+        .is("deleted_at", null)
+        .in("id", data.transactionIds),
+    ]);
+    if (categoryResult.error) throw new Error(categoryResult.error.message);
+    if (transactionsResult.error) throw new Error(transactionsResult.error.message);
+
+    const category = categoryResult.data;
+    if (!category || (category.kind !== "expense" && category.kind !== "revenue")) {
+      throw new Error("A categoria de destino não está disponível nesta empresa.");
+    }
+    const rows = transactionsResult.data ?? [];
+    assertCompatibleAuditReassignment(data.transactionIds, rows, category.kind);
+    const impact = previewReassignmentImpact(rows, category);
+    return {
+      ...impact,
+      destinationName: category.name,
+      destinationIsBalanceSheet: category.is_balance_sheet === true,
+      destinationHasDreLine: category.dre_line !== null && isStoredDreLine(category.dre_line),
+    };
+  });
 
 export const reassignCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
