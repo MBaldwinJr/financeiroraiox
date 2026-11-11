@@ -23,6 +23,9 @@ export function CashflowPage() {
     queryFn: () =>
       fetcher({ data: { companyId: companyId!, year: range.year, month: null, basis: "cash", ...filters } }),
     enabled: !!companyId,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   if (!companyId)
