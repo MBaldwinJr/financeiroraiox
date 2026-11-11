@@ -73,7 +73,7 @@ const REASON_HINTS: Record<DreAuditIssue["reason"], string> = {
   conta_patrimonial_em_dre:
     "Conta patrimonial (Balanço) — fornecedores, principal de empréstimos ou imobilizado. É excluída do resultado. Seu efeito no saldo de caixa depende de conciliação de liquidações e contas bancárias, ainda não homologada. Item informativo.",
   duplicidade_detectada:
-    "Foram encontrados múltiplos lançamentos com a mesma impressão digital (data, valor, descrição e ERP). Isso pode indicar erro de importação ou processamento duplicado. Revise e utilize 'Excluir Selecionados' para manter apenas um registro.",
+    "Há lançamentos com a mesma impressão digital. Isso pode indicar uma importação duplicada, mas não comprova duplicidade. Confronte extratos e documentos antes de marcar algum registro como excluído.",
 };
 
 export function DreAuditPage() {
@@ -178,6 +178,19 @@ export function DreAuditPage() {
     }
     return Array.from(s);
   }, [data?.issues, selected]);
+
+  const selectedKind = useMemo(() => {
+    const selectedKinds = new Set(
+      (data?.issues ?? [])
+        .filter((issue) => selected.has(issue.id))
+        .map((issue) => issue.kind),
+    );
+    return selectedKinds.size === 1 ? [...selectedKinds][0] : null;
+  }, [data?.issues, selected]);
+
+  useEffect(() => {
+    setTargetCategory("");
+  }, [selectedKind]);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -329,16 +342,20 @@ export function DreAuditPage() {
                   disabled={
                     selectedMissingCompetencia.length === 0 || fillMut.isPending
                   }
-                  onClick={() => fillMut.mutate(selectedMissingCompetencia)}
+                  onClick={() => {
+                    if (confirm(`Preencher a competência de ${selectedMissingCompetencia.length} lançamento(s) usando a data do registro? Isso pode afetar a DRE. Confirme apenas após verificar que as datas correspondem ao fato gerador.`)) {
+                      fillMut.mutate(selectedMissingCompetencia);
+                    }
+                  }}
                 >
                   Preencher competência = data ({selectedMissingCompetencia.length})
                 </Button>
-                <Select value={targetCategory} onValueChange={setTargetCategory}>
+                <Select value={targetCategory} onValueChange={setTargetCategory} disabled={!selectedKind}>
                   <SelectTrigger className="h-9 w-[220px]">
                     <SelectValue placeholder="Reatribuir categoria…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
+                    {categories.filter((c) => c.kind === selectedKind).map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.name} · {c.kind === "revenue" ? "Receita" : "Despesa"}
                       </SelectItem>
@@ -348,14 +365,26 @@ export function DreAuditPage() {
                 <Button
                   size="sm"
                   disabled={
-                    !targetCategory || selectedIds.length === 0 || reassignMut.isPending
+                    !targetCategory || !selectedKind || selectedIds.length === 0 || reassignMut.isPending
                   }
-                  onClick={() =>
-                    reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory })
-                  }
+                  onClick={() => {
+                    const chosen = categories.find((item) => item.id === targetCategory);
+                    if (!chosen) {
+                      toast.error("Selecione uma categoria válida.");
+                      return;
+                    }
+                    if (confirm(`Reatribuir ${selectedIds.length} lançamento(s) para "${chosen.name}"? A categoria deve ter o mesmo tipo (receita/despesa) dos lançamentos. Esta ação altera os relatórios financeiros. Confirme somente após revisar os documentos.`)) {
+                      reassignMut.mutate({ ids: selectedIds, categoryId: targetCategory });
+                    }
+                  }}
                 >
                   Aplicar categoria
                 </Button>
+                {selectedIds.length > 0 && !selectedKind && (
+                  <span className="text-xs text-amber-600">
+                    Para reclassificar, selecione apenas receitas ou apenas despesas.
+                  </span>
+                )}
                 <Button
                   size="sm"
                   variant="destructive"

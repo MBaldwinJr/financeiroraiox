@@ -110,6 +110,17 @@ export function ClassificationGapDetails({ companyId, year, group, onClose }: Pr
                   <div className="mt-2 text-sm font-semibold tabular-nums">{formatBRL(item.expenseCents)} em despesas</div>
                   {item.revenueCents !== 0 && <div className="text-xs tabular-nums">{formatBRL(item.revenueCents)} em receitas</div>}
                   <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.reviewQuestion}</p>
+                  <details className="mt-3 rounded-md border border-border/70 px-2 py-2">
+                    <summary className="cursor-pointer text-xs font-medium">Documentos a conferir</summary>
+                    <ul className="mt-2 list-inside list-disc space-y-1 text-xs leading-5 text-muted-foreground">
+                      {reviewSignalInfo(item.signal).evidenceToCheck.map((document) => (
+                        <li key={document}>{document}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                      Lista de verificação, sem envio ou armazenamento de comprovantes.
+                    </p>
+                  </details>
                 </div>
               ))}
             </div>

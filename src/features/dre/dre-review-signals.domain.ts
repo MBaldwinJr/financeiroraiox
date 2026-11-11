@@ -14,6 +14,7 @@ export interface ReviewSignalInfo {
   signal: ReviewSignal;
   label: string;
   reviewQuestion: string;
+  evidenceToCheck: readonly string[];
 }
 
 export const REVIEW_SIGNALS: readonly ReviewSignalInfo[] = [
@@ -21,26 +22,31 @@ export const REVIEW_SIGNALS: readonly ReviewSignalInfo[] = [
     signal: "credit_operations",
     label: "Crédito e rotativo",
     reviewQuestion: "Separar principal, juros, encargos e transferências conforme contrato e extrato.",
+    evidenceToCheck: ["Contrato e aditivos do crédito", "Extratos com movimentações de principal", "Demonstrativo de juros e tarifas", "Comprovantes de amortização ou liberação"],
   },
   {
     signal: "fees",
     label: "Tarifas e taxas",
     reviewQuestion: "Conferir comprovantes e identificar tarifa, antecipação, comissão ou outro ajuste.",
+    evidenceToCheck: ["Relatório da adquirente ou banco", "Comprovante de desconto ou antecipação", "Conciliação com as vendas e recebíveis", "Documento fiscal ou demonstrativo de tarifas"],
   },
   {
     signal: "returns",
     label: "Devoluções e estornos",
     reviewQuestion: "Conferir operação original, reembolso, cancelamento e respectiva competência.",
+    evidenceToCheck: ["Venda e documento fiscal originais", "Nota de devolução ou documento de estorno", "Comprovante do reembolso", "Conciliação com estoque e contas a receber"],
   },
   {
     signal: "barter",
     label: "Permutas e trocas",
     reviewQuestion: "Verificar bens ou serviços trocados, documentos fiscais e eventuais contrapartidas.",
+    evidenceToCheck: ["Contrato ou termo de permuta", "Notas fiscais de ambos os lados", "Valoração e registro dos bens ou serviços", "Conciliação de estoques e contrapartidas"],
   },
   {
     signal: "unresolved",
     label: "Outros / indeterminados",
     reviewQuestion: "Analisar documento e natureza econômica antes de propor um enquadramento.",
+    evidenceToCheck: ["Documento ou extrato original", "Identificação da contraparte", "Justificativa econômica da operação", "Confirmação do responsável contábil"],
   },
 ];
 
