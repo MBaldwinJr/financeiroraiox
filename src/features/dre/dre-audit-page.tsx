@@ -179,6 +179,19 @@ export function DreAuditPage() {
     return Array.from(s);
   }, [data?.issues, selected]);
 
+  const selectedKind = useMemo(() => {
+    const selectedKinds = new Set(
+      (data?.issues ?? [])
+        .filter((issue) => selected.has(issue.id))
+        .map((issue) => issue.kind),
+    );
+    return selectedKinds.size === 1 ? [...selectedKinds][0] : null;
+  }, [data?.issues, selected]);
+
+  useEffect(() => {
+    setTargetCategory("");
+  }, [selectedKind]);
+
   return (
     <TooltipProvider delayDuration={150}>
     <div className="space-y-6">
@@ -337,12 +350,12 @@ export function DreAuditPage() {
                 >
                   Preencher competência = data ({selectedMissingCompetencia.length})
                 </Button>
-                <Select value={targetCategory} onValueChange={setTargetCategory}>
+                <Select value={targetCategory} onValueChange={setTargetCategory} disabled={!selectedKind}>
                   <SelectTrigger className="h-9 w-[220px]">
                     <SelectValue placeholder="Reatribuir categoria…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
+                    {categories.filter((c) => c.kind === selectedKind).map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.name} · {c.kind === "revenue" ? "Receita" : "Despesa"}
                       </SelectItem>
@@ -352,7 +365,7 @@ export function DreAuditPage() {
                 <Button
                   size="sm"
                   disabled={
-                    !targetCategory || selectedIds.length === 0 || reassignMut.isPending
+                    !targetCategory || !selectedKind || selectedIds.length === 0 || reassignMut.isPending
                   }
                   onClick={() => {
                     const chosen = categories.find((item) => item.id === targetCategory);
@@ -367,6 +380,11 @@ export function DreAuditPage() {
                 >
                   Aplicar categoria
                 </Button>
+                {selectedIds.length > 0 && !selectedKind && (
+                  <span className="text-xs text-amber-600">
+                    Para reclassificar, selecione apenas receitas ou apenas despesas.
+                  </span>
+                )}
                 <Button
                   size="sm"
                   variant="destructive"
