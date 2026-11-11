@@ -34,7 +34,7 @@ revoke all on finance_internal.sales_month_revisions from public, anon, authenti
 create or replace function finance_internal.sales_month_version(
   p_company_id uuid, p_period_start date
 ) returns text
-language plpgsql stable security definer set search_path = ''
+language plpgsql volatile security definer set search_path = ''
 as $
 begin
   if auth.uid() is null or not exists (
@@ -60,7 +60,7 @@ grant execute on function finance_internal.sales_month_version(uuid,date) to aut
 create or replace function public.sales_month_version(
   p_company_id uuid, p_period_start date
 ) returns text
-language plpgsql stable security invoker set search_path = ''
+language plpgsql volatile security invoker set search_path = ''
 as $$
 declare v_user uuid;
 begin
