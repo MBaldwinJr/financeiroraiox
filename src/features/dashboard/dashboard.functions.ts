@@ -6,6 +6,7 @@ import {
   applyCashExpenses,
   applyRevenueBasis,
   bucketTransactionsByMonth,
+  buildFinancialMonthViews,
   computeExpenseComposition,
   computeKpis,
   hasFinancialActivity,
@@ -26,6 +27,7 @@ const Schema = financialFiltersSchema.extend({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12).nullable().optional(),
   basis: z.enum(["accrual", "cash", "erp_sales"]).optional(),
+  includeMonthSnapshots: z.boolean().optional(),
 });
 
 const yearWindow = (year: number) => ({
@@ -102,7 +104,21 @@ export const getFinancials = createServerFn({ method: "POST" })
       ),
     };
 
+    const monthSnapshots = data.includeMonthSnapshots
+      ? buildFinancialMonthViews(
+          data.year,
+          basis,
+          monthly,
+          previousMonths,
+          txs,
+          basisRows.paidRows,
+          basisRows.paidExpenseRows,
+          basisRows.salesRows,
+        )
+      : undefined;
+
     return {
+      monthSnapshots,
       kpis: { ...kpis, prev: previous },
       monthly,
       prevMonthly,

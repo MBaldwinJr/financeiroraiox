@@ -329,3 +329,41 @@ export function accumulatedNetResult(monthly: readonly MonthBucket[]): number[] 
     return cumulative;
   });
 }
+
+
+/**
+ * Projeta os doze meses a partir de UM único resumo anual autenticado.
+ * Usar no Dashboard impede novos downloads de 2026/2025 ao apenas trocar o mês.
+ * A chave React Query continua específica por empresa, ano, regime e filtros.
+ */
+export function buildFinancialMonthViews(
+  year: number,
+  basis: RevenueBasis,
+  monthly: MonthBucket[],
+  previousMonths: MonthBucket[],
+  transactions: readonly TransactionRow[],
+  paidRevenue: readonly PaidRevenueRow[],
+  paidExpenses: readonly PaidExpenseRow[],
+  sales: readonly ErpSaleRow[],
+) {
+  const hasYearData = hasFinancialActivity(
+    basis, null, transactions, paidRevenue, paidExpenses, sales,
+  );
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    return {
+      kpis: {
+        ...computeKpis(monthly, [index]),
+        prev: computePrevious(month, year, monthly, previousMonths),
+      },
+      byPayment: paymentBreakdownForPeriod(basis, month, transactions, paidRevenue),
+      expenseComposition: computeExpenseComposition(monthly, [index]),
+      periodActivity: {
+        hasSelectedPeriodData: hasFinancialActivity(
+          basis, month, transactions, paidRevenue, paidExpenses, sales,
+        ),
+        hasYearData,
+      },
+    };
+  });
+}
