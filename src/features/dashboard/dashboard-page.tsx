@@ -89,21 +89,35 @@ export function DashboardPage() {
   const fetcher = useServerFn(getFinancials);
 
   const query = useQuery({
-    queryKey: ["financials", companyId, range.year, range.month, basis, filterKey],
+    // Month switching reuses this annual snapshot; it must not trigger a full DB scan.
+    queryKey: ["financials", companyId, range.year, null, basis, filterKey, "monthly-snapshot-v1"],
     queryFn: () =>
-      fetcher({ data: { companyId: companyId!, year: range.year, month: range.month, basis, ...filters } }),
+      fetcher({
+        data: {
+          companyId: companyId!,
+          year: range.year,
+          month: null,
+          basis,
+          includeMonthSnapshots: true,
+          ...filters,
+        },
+      }),
     enabled: !!companyId,
     staleTime: 90_000,
     refetchOnWindowFocus: false,
     retry: 1,
   });
 
+  const selectedPeriod = range.month == null
+    ? query.data
+    : query.data?.monthSnapshots?.[range.month - 1];
+
   const analyticsFetcher = useServerFn(getAnalytics);
   const analyticsQuery = useQuery({
     queryKey: ["analytics", companyId, range.year, range.month, filterKey],
     queryFn: () =>
       analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month, ...filters } }),
-    enabled: !!companyId && advancedOpen && !!query.data?.periodActivity.hasSelectedPeriodData,
+    enabled: !!companyId && advancedOpen && !!selectedPeriod?.periodActivity.hasSelectedPeriodData,
     staleTime: 120_000,
     refetchOnWindowFocus: false,
   });
@@ -138,9 +152,15 @@ export function DashboardPage() {
     );
   }
 
-  const { kpis, monthly, prevMonthly, byPayment, expenseComposition } = query.data;
+  if (!selectedPeriod) {
+    return <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      Resumo do mês indisponível. Atualize os dados para continuar.
+    </p>;
+  }
+  const { kpis, byPayment, expenseComposition } = selectedPeriod;
+  const { monthly, prevMonthly } = query.data;
   const isMonth = range.month != null;
-  const hasPeriodData = query.data.periodActivity.hasSelectedPeriodData;
+  const hasPeriodData = selectedPeriod.periodActivity.hasSelectedPeriodData;
   const hasExpenseBreakdown = Object.values(expenseComposition).some((value) => value > 0);
   const periodLabel = isMonth ? `${MONTH_LABELS[range.month! - 1]}/${range.year}` : `${range.year}`;
 
