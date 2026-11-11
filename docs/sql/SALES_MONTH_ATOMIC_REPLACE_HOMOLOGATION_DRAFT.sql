@@ -362,10 +362,15 @@ revoke all on function public.sales_month_restore(uuid,date,uuid,text,uuid)
 grant execute on function public.sales_month_restore(uuid,date,uuid,text,uuid)
   to authenticated;
 
--- CRÍTICO: bloquear Data API de escrita direta. A importação inicial também
--- deve migrar para public.sales_month_commit ANTES de executar esta proposta.
--- RLS SELECT de leitura por membro permanece aplicável.
-revoke insert, update, delete on table public.sales from authenticated, anon;
+-- CRÍTICO: RLS NÃO protege TRUNCATE nem REFERENCES.
+-- O banco atual concede TODOS os privilégios de tabela, incluindo TRUNCATE,
+-- a anon e authenticated. Revogar apenas INSERT/UPDATE/DELETE é insuficiente.
+-- Restringir a SELECT para membros autenticados, preservando RLS de leitura.
+-- RPCs SECURITY DEFINER operam com o proprietário privilegiado da função.
+-- A importação inicial e exclusão direta precisam estar adaptadas ANTES
+-- da aplicação desta proposta. Jamais aplicar sem homologação isolada.
+revoke all privileges on table public.sales from public, anon, authenticated;
+grant select on table public.sales to authenticated;
 drop policy if exists "members write sales" on public.sales;
 
 commit;
