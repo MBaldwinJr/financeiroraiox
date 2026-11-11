@@ -28,6 +28,14 @@
 - A consulta roda somente ao expandir o painel e utiliza cache por empresa e ano por 90 segundos.
 - Nada é gravado no banco; nenhuma migração nem alteração de RLS.
 
+## Consistência do módulo de Estoque
+
+- Os indicadores de giro e cobertura usam o CMV pela **competência** e `dre_line=cmv`, alinhado com a DRE. As consultas não usam a data de postagem como substituto.
+- O CMV considerado vai até o dia de referência, com limite exclusivo no dia seguinte, sem incluir competências futuras. Para exercícios encerrados, usa o fim do ano; para anos futuros, não inventa períodos transcorridos.
+- Os snapshots exibidos pertencem ao **ano selecionado** e não ultrapassam a data de referência. A tela mostra explicitamente a data do último snapshot.
+- Giro e cobertura continuam **estimativas**, pois não há garantia de fechamentos físicos mensais nem de qualidade dos custos de estoque.
+- Importações novas de PDFs e mudanças nos snapshots invalidam o cache da reconciliação por empresa.
+
 ## Critérios para revisão documental
 
 1. Priorizar meses cujo custo do PDF e CMV da DRE diferem de forma material, especialmente quando o PDF cobre o mês civil completo.

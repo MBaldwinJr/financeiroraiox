@@ -181,7 +181,8 @@ export function InventorySection() {
     try {
       await del({ data: { companyId, id } });
       toast.success("Snapshot removido.");
-      qc.invalidateQueries({ queryKey });
+      void qc.invalidateQueries({ queryKey });
+      void qc.invalidateQueries({ queryKey: ["cmv-reconciliation", companyId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
@@ -193,10 +194,13 @@ export function InventorySection() {
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Estoque (valor agregado)</h2>
           <p className="text-xs text-muted-foreground">
-            Snapshots periódicos do valor de estoque. Giro e cobertura usam o CMV YTD de {year}.
+            Snapshots do ano selecionado. Giro e cobertura são estimativas baseadas no CMV por competência e nos estoques disponíveis, não saldos atuais conciliados.
           </p>
         </div>
-        <NewSnapshotDialog companyId={companyId} onSaved={() => qc.invalidateQueries({ queryKey })} />
+        <NewSnapshotDialog companyId={companyId} onSaved={() => {
+          void qc.invalidateQueries({ queryKey });
+          void qc.invalidateQueries({ queryKey: ["cmv-reconciliation", companyId] });
+        }} />
       </div>
 
       {isLoading || !m ? (
@@ -211,13 +215,13 @@ export function InventorySection() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
-              label="Valor em estoque (custo)"
+              label={`Estoque no snapshot de ${m.current.snapshot_date}`}
               value={m.current.cost_cents}
               icon={Package}
               accent="info"
             />
             <MetricCard
-              label="Giro anualizado"
+              label="Giro anualizado estimado"
               icon={RefreshCcw}
               accent="success"
               display={m.turnover != null ? `${m.turnover.toFixed(2)}×` : "—"}

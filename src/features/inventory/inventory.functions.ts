@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchAllRowsConcurrent } from "@/lib/supabase-paginate";
+import { inventoryAsOfWindow } from "./inventory-period.domain";
 
 const CompanyYear = z.object({
   companyId: z.string().uuid(),
@@ -28,20 +30,22 @@ export interface InventoryMetrics {
   potentialMarginPct: number | null;
 }
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
-
 export const getInventoryMetrics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CompanyYear.parse(input))
   .handler(async ({ context, data }): Promise<InventoryMetrics> => {
-    const start = `${data.year}-01-01`;
-    const end = `${data.year + 1}-01-01`;
+    const { start, upperExclusive, daysElapsed } = inventoryAsOfWindow(
+      data.year,
+      new Date().toISOString().slice(0, 10),
+    );
 
     const { data: snaps, error: snapErr } = await context.supabase
       .from("inventory_snapshots")
       .select("id, snapshot_date, cost_cents, retail_cents, notes")
       .eq("company_id", data.companyId)
       .is("deleted_at", null)
+      .gte("snapshot_date", start)
+      .lt("snapshot_date", upperExclusive)
       .order("snapshot_date", { ascending: false })
       .limit(24);
     if (snapErr) throw new Error(snapErr.message);
@@ -50,42 +54,43 @@ export const getInventoryMetrics = createServerFn({ method: "POST" })
     const current = history[0] ?? null;
     const previous = history[1] ?? null;
 
-    const today = new Date();
-    const yearStart = new Date(`${data.year}-01-01T00:00:00Z`);
-    const upper = today < new Date(end) ? today : new Date(end);
-    const cmvUpperIso = isoDate(upper);
-
-    const { data: cmvRows, error: cmvErr } = await context.supabase
-      .from("transactions")
-      .select("amount_cents, category:categories!inner(dre_group)")
-      .eq("company_id", data.companyId)
-      .eq("kind", "expense")
-      .is("deleted_at", null)
-      .gte("date", start)
-      .lt("date", cmvUpperIso)
-      .eq("category.dre_group", "cmv");
-    if (cmvErr) throw new Error(cmvErr.message);
-
-    const cmvYtdCents = (cmvRows ?? []).reduce(
-      (acc: number, r: { amount_cents: number }) => acc + r.amount_cents,
-      0,
+    // The DRE recognizes CMV by COMPETÊNCIA and dre_line, not posting date.
+    // Limit inventory metrics to the selected year and as-of date.
+    const cmvRows = await fetchAllRowsConcurrent<{ amount_cents: number }>(
+      (from, to, withCount) =>
+        context.supabase
+          .from("transactions")
+          .select(
+            "amount_cents, category:categories!inner(dre_line, is_balance_sheet)",
+            withCount ? { count: "exact" } : undefined,
+          )
+          .eq("company_id", data.companyId)
+          .eq("kind", "expense")
+          .is("deleted_at", null)
+          .gte("competencia", start)
+          .lt("competencia", upperExclusive)
+          .eq("category.dre_line", "cmv")
+          .eq("category.is_balance_sheet", false)
+          .order("competencia", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as unknown as PromiseLike<{
+            data: { amount_cents: number }[] | null;
+            error: { message: string } | null;
+            count?: number | null;
+          }>,
     );
-
-    const daysElapsed = Math.max(
-      1,
-      Math.ceil((upper.getTime() - yearStart.getTime()) / 86_400_000),
-    );
+    const cmvYtdCents = cmvRows.reduce((sum, row) => sum + row.amount_cents, 0);
 
     const avgInventoryCents =
       current && previous
         ? Math.round((current.cost_cents + previous.cost_cents) / 2)
         : (current?.cost_cents ?? null);
 
-    const annualizedCmv = (cmvYtdCents / daysElapsed) * 365;
+    const annualizedCmv = daysElapsed > 0 ? (cmvYtdCents / daysElapsed) * 365 : 0;
     const turnover =
       avgInventoryCents && avgInventoryCents > 0 ? annualizedCmv / avgInventoryCents : null;
 
-    const cmvDaily = cmvYtdCents / daysElapsed;
+    const cmvDaily = daysElapsed > 0 ? cmvYtdCents / daysElapsed : 0;
     const coverageDays =
       current && cmvDaily > 0 ? current.cost_cents / cmvDaily : null;
 

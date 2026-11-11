@@ -41,6 +41,7 @@ export function SalesImportPage() {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["financials"] });
       qc.invalidateQueries({ queryKey: ["commercial"] });
+      qc.invalidateQueries({ queryKey: ["cmv-reconciliation", companyId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao importar."),
   });
