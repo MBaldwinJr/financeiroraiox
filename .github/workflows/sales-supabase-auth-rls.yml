@@ -1,0 +1,52 @@
+name: Sales Supabase Auth + RLS sandbox
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-supabase-auth:
+    name: Local GoTrue, PostgREST and RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI v3
+        uses: supabase/setup-cli@v1
+        with:
+          version: 3.0.0
+
+      - name: Start disposable Supabase instance (no hosted links)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/raiox-auth-ci/supabase"
+          cat > "$RUNNER_TEMP/raiox-auth-ci/supabase/config.toml" <<'CONF'
+          project_id = "finance-raiox-auth-synthetic-ci"
+
+          [auth.email]
+          enable_confirmations = false
+          CONF
+          cd "$RUNNER_TEMP/raiox-auth-ci"
+          supabase --version
+          supabase start --exclude realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase status -o json > "$RUNNER_TEMP/raiox-supabase-local-status.json"
+
+      - name: Verify Auth JWT, RLS, Data API and atomic RPCs
+        run: |
+          python3 tests/supabase/test_auth_rls.py "$RUNNER_TEMP/raiox-supabase-local-status.json"
+
+      - name: Stop disposable local stack
+        if: always()
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/raiox-auth-ci" 2>/dev/null || exit 0
+          supabase stop --no-backup || true
