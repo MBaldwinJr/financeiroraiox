@@ -62,7 +62,8 @@ test("script SQL permanece sob docs e não é executado pelo app ou pelo CI", ()
   assert.match(sql, /auth.uid\(\)/);
   assert.match(sql, /sales_month_revisions/);
   assert.match(sql, /sales_month_restore/);
-  assert.match(sql, /revoke insert, update, delete on table public\.sales/);
+  assert.match(sql, /revoke all privileges on table public\.sales from public, anon, authenticated/);
+  assert.match(sql, /grant select on table public\.sales to authenticated/);
   assert.match(sql, /grant execute on function public\.sales_month_commit/);
 });
 
