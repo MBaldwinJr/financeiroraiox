@@ -13,6 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
+from pathlib import Path
 
 COMPANY_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 COMPANY_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
@@ -101,6 +102,20 @@ def ensure_forbidden(status, label):
 
 def main(status_path):
     api, db, key = load_local_status(status_path)
+    repo_root = Path(__file__).resolve().parents[2]
+    # Safety guard above verifies that DB_URL resolves to localhost before
+    # any schema change can be executed. Never connect to hosted projects.
+    for relative in (
+        "tests/supabase/sales-auth-fixture.sql",
+        "docs/sql/SALES_MONTH_ATOMIC_REPLACE_HOMOLOGATION_DRAFT.sql",
+    ):
+        command = ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1",
+                   db, "-f", str(repo_root / relative)]
+        executed = subprocess.run(command, capture_output=True, text=True)
+        if executed.returncode != 0:
+            raise RuntimeError("Local schema step failed (" + relative + "): " +
+                               executed.stderr[-2400:])
+        print("PASS: applied synthetic local-only SQL:", relative)
     ids = {name: signed_up_user(api, key, name)
            for name in ("owner", "admin", "member", "foreign", "outsider")}
     seed_memberships(db, ids)
