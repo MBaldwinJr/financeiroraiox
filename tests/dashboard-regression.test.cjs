@@ -180,3 +180,91 @@ test("composição de pagamentos por período e regime não mistura meses", () =
   assert.equal(yearly.card, 34000);
   assert.equal(domain.paymentBreakdownForPeriod("erp_sales", null, transactions, paid).pix, 0);
 });
+
+
+test("visões mensais do snapshot anual reproduzem KPIs, pagamentos e comparações", () => {
+  const transactions = [
+    tx({ competencia: "2026-01-10", amount_cents: 120000, payment_method: "pix" }),
+    tx({ competencia: "2026-01-13", kind: "expense", amount_cents: 40000, category: { dre_group: "cmv", is_balance_sheet: false } }),
+    tx({ competencia: "2026-01-14", kind: "expense", amount_cents: 15000, category: { dre_group: "fixed", is_balance_sheet: false } }),
+    tx({ competencia: "2026-02-10", amount_cents: 70000, payment_method: "card" }),
+    tx({ competencia: "2026-02-12", kind: "expense", amount_cents: 32000, category: { dre_group: "cmv", is_balance_sheet: false } }),
+    tx({ competencia: "2026-03-09", amount_cents: 700000, payment_method: "boleto", category: { dre_group: "revenue", is_balance_sheet: true } }),
+  ];
+  const monthly = domain.bucketTransactionsByMonth(transactions).monthly;
+  const previousMonths = months();
+  Object.assign(previousMonths[11], { revenue: 28000, expense: 11000, cmv: 8000, fixed: 3000 });
+  const snapshots = domain.buildFinancialMonthViews(
+    2026, "accrual", monthly, previousMonths, transactions, [], [], [],
+  );
+  assert.equal(snapshots.length, 12);
+  for (let index = 0; index < 12; index++) {
+    const month = index + 1;
+    assert.deepEqual(snapshots[index].kpis, {
+      ...domain.computeKpis(monthly, [index]),
+      prev: domain.computePrevious(month, 2026, monthly, previousMonths),
+    });
+    assert.deepEqual(
+      snapshots[index].byPayment,
+      domain.paymentBreakdownForPeriod("accrual", month, transactions, []),
+    );
+    assert.deepEqual(snapshots[index].expenseComposition, domain.computeExpenseComposition(monthly, [index]));
+    assert.equal(snapshots[index].periodActivity.hasSelectedPeriodData,
+      domain.hasFinancialActivity("accrual", month, transactions, [], [], []));
+    assert.equal(snapshots[index].periodActivity.hasYearData, true);
+  }
+  assert.equal(snapshots[0].kpis.netProfit, 65000);
+  assert.equal(snapshots[1].kpis.netProfit, 38000);
+  assert.equal(snapshots[10].periodActivity.hasSelectedPeriodData, false);
+  assert.equal(snapshots[0].kpis.prev.revenue, 28000);
+  assert.equal(snapshots[0].byPayment.pix, 120000);
+  assert.equal(snapshots[1].byPayment.card, 70000);
+  assert.equal(snapshots[2].byPayment.boleto, 0, "conta patrimonial não é receita");
+});
+
+test("projeções mensais respeitam regime caixa e ERP sem misturar meses", () => {
+  const transactions = [
+    tx({ competencia: "2026-01-07", amount_cents: 12000, payment_method: "pix" }),
+  ];
+  const paidRevenues = [
+    { paid_at: "2026-03-10", amount_cents: 7000, payment_method: "boleto", category: { is_balance_sheet: false } },
+    { paid_at: "2026-03-10", amount_cents: 9000, payment_method: "pix", category: { is_balance_sheet: true } },
+  ];
+  const paidExpenses = [
+    { paid_at: "2026-03-14", amount_cents: 2500, category: { dre_group: "fixed", is_balance_sheet: false } },
+  ];
+  const cashMonths = domain.bucketTransactionsByMonth(transactions).monthly;
+  domain.applyRevenueBasis(cashMonths, "cash", paidRevenues, []);
+  domain.applyCashExpenses(cashMonths, paidExpenses);
+  const cash = domain.buildFinancialMonthViews(
+    2026, "cash", cashMonths, months(), transactions, paidRevenues, paidExpenses, [],
+  );
+  assert.equal(cash[0].kpis.grossRevenue, 0);
+  assert.equal(cash[2].kpis.grossRevenue, 7000);
+  assert.equal(cash[2].kpis.netProfit, 4500);
+  assert.equal(cash[2].byPayment.boleto, 7000);
+  assert.equal(cash[2].byPayment.pix, 0);
+  assert.equal(cash[0].periodActivity.hasSelectedPeriodData, false);
+  assert.equal(cash[2].periodActivity.hasSelectedPeriodData, true);
+
+  const sales = [{ period_start: "2026-07-01", net_amount_cents: 40000, returns_cents: 2000 }];
+  const erpMonths = domain.bucketTransactionsByMonth(transactions).monthly;
+  domain.applyRevenueBasis(erpMonths, "erp_sales", [], sales);
+  const erp = domain.buildFinancialMonthViews(
+    2026, "erp_sales", erpMonths, months(), transactions, [], [], sales,
+  );
+  assert.equal(erp[6].kpis.grossRevenue, 38000);
+  assert.equal(erp[0].kpis.grossRevenue, 0);
+  assert.equal(erp[6].periodActivity.hasSelectedPeriodData, true);
+  assert.equal(erp[9].periodActivity.hasSelectedPeriodData, false);
+  assert.ok(erp.every((snapshot) => Object.values(snapshot.byPayment).every((value) => value === 0)));
+});
+
+test("um ano vazio mantém todos os meses sem atividade", () => {
+  const monthly = months();
+  const result = domain.buildFinancialMonthViews(2026, "accrual", monthly, months(), [], [], [], []);
+  assert.equal(result.length, 12);
+  assert.ok(result.every((snapshot) => !snapshot.periodActivity.hasSelectedPeriodData));
+  assert.ok(result.every((snapshot) => !snapshot.periodActivity.hasYearData));
+  assert.ok(result.every((snapshot) => snapshot.kpis.grossRevenue === 0));
+});
