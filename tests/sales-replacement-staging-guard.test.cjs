@@ -48,6 +48,10 @@ test("script SQL permanece sob docs e não é executado pelo app ou pelo CI", ()
   assert.match(sql, /NÃO APLICADA NO BANCO/);
   assert.match(sql, /set search_path = ''/);
   assert.match(sql, /pg_advisory_xact_lock/);
+  // A STABLE fingerprint could see a stale snapshot after DELETE+INSERT
+  // inside the same RPC; require VOLATILE so the new version is re-read.
+  assert.match(sql, /sales_month_version\([\s\S]*?language plpgsql volatile security definer/);
+  assert.match(sql, /sales_month_version\([\s\S]*?language plpgsql volatile security invoker/);
   assert.match(sql, /p_expected_version/);
   assert.match(sql, /auth.uid\(\)/);
   assert.match(sql, /sales_month_revisions/);
