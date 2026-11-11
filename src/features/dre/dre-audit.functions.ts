@@ -6,6 +6,7 @@ import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
 import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit.domain";
 import { assertCompatibleAuditReassignment } from "./audit-reassignment.domain";
 import { previewReassignmentImpact } from "./audit-reassignment-preview.domain";
+import { reassignmentSnapshotToken } from "./audit-reassignment-snapshot.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -204,6 +205,7 @@ const ReassignCategoryInput = z.object({
   transactionIds: z.array(z.string().uuid()).min(1).max(1000),
   categoryId: z.string().uuid(),
 });
+const ReassignConfirmedInput = ReassignCategoryInput.extend({ confirmToken: z.string().regex(/^[a-f0-9]{64}$/) });
 
 /**
  * Prévia SOMENTE DE LEITURA. Reutiliza as validações do endpoint de atualização
@@ -223,7 +225,7 @@ export const getAuditReassignmentPreview = createServerFn({ method: "POST" })
       context.supabase
         .from("transactions")
         .select(
-          "id, kind, competencia, amount_cents, category:categories(dre_line, is_balance_sheet)",
+          "id, kind, competencia, amount_cents, category_id, category:categories(dre_line, is_balance_sheet)",
         )
         .eq("company_id", data.companyId)
         .is("deleted_at", null)
@@ -239,8 +241,10 @@ export const getAuditReassignmentPreview = createServerFn({ method: "POST" })
     const rows = transactionsResult.data ?? [];
     assertCompatibleAuditReassignment(data.transactionIds, rows, category.kind);
     const impact = previewReassignmentImpact(rows, category);
+    const confirmToken = reassignmentSnapshotToken(data.companyId, rows, category);
     return {
       ...impact,
+      confirmToken,
       destinationName: category.name,
       destinationIsBalanceSheet: category.is_balance_sheet === true,
       destinationHasDreLine: category.dre_line !== null && isStoredDreLine(category.dre_line),
@@ -249,11 +253,11 @@ export const getAuditReassignmentPreview = createServerFn({ method: "POST" })
 
 export const reassignCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => ReassignCategoryInput.parse(i))
+  .inputValidator((i: unknown) => ReassignConfirmedInput.parse(i))
   .handler(async ({ context, data }) => {
     const { data: cat, error: catErr } = await context.supabase
       .from("categories")
-      .select("id, kind")
+      .select("id, kind, dre_line, is_balance_sheet")
       .eq("company_id", data.companyId)
       .eq("id", data.categoryId)
       .maybeSingle();
@@ -267,12 +271,15 @@ export const reassignCategory = createServerFn({ method: "POST" })
     // silenciosas entre receita/despesa e IDs de empresas diferentes.
     const { data: rows, error: readErr } = await context.supabase
       .from("transactions")
-      .select("id, kind")
+      .select("id, kind, competencia, amount_cents, category_id, category:categories(dre_line, is_balance_sheet)")
       .eq("company_id", data.companyId)
       .is("deleted_at", null)
       .in("id", data.transactionIds);
     if (readErr) throw new Error(readErr.message);
     assertCompatibleAuditReassignment(data.transactionIds, rows ?? [], cat.kind);
+    if (reassignmentSnapshotToken(data.companyId, rows ?? [], cat) !== data.confirmToken) {
+      throw new Error("Os lançamentos ou o mapeamento contábil mudaram desde a simulação. Gere uma nova prévia.");
+    }
 
     const { data: updatedRows, error } = await context.supabase
       .from("transactions")
