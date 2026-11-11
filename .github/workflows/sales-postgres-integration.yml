@@ -1,0 +1,53 @@
+name: Sales atomic PostgreSQL integration
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: finance_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d finance_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: synthetic-ci-only
+      PGDATABASE: finance_test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Ensure PostgreSQL client exists
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Create synthetic database and test roles
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/postgres/sales-fixture.sql
+      - name: Apply proposed SQL only to disposable service
+        run: psql -X -v ON_ERROR_STOP=1 -f docs/sql/SALES_MONTH_ATOMIC_REPLACE_HOMOLOGATION_DRAFT.sql
+      - name: Test atomic replace, full rollback, restore and RLS
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/postgres/sales-atomic-integration.sql
+      - name: Simulate simultaneous replacements
+        run: bash tests/postgres/sales-concurrency.sh
