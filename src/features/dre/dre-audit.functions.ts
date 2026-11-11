@@ -7,6 +7,7 @@ import { summarizeClassificationGaps, type ClassificationGap } from "./dre-audit
 import { assertCompatibleAuditReassignment } from "./audit-reassignment.domain";
 import { previewReassignmentImpact } from "./audit-reassignment-preview.domain";
 import { reassignmentSnapshotToken } from "./audit-reassignment-snapshot.domain";
+import { canMutateAudit, requireAuditMutationRole } from "./dre-audit-permissions.domain";
 
 const Input = z.object({
   companyId: z.string().uuid(),
@@ -166,6 +167,24 @@ export const getDreAudit = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Permite esconder operações sensíveis para membros, sem alterar a capacidade
+ * de consulta da auditoria. A verificação é repetida no servidor de escrita.
+ */
+export const getDreAuditMutationAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ companyId: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: membership, error } = await context.supabase
+      .from("company_members")
+      .select("role")
+      .eq("company_id", data.companyId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error("Não foi possível verificar as permissões da Auditoria DRE.");
+    return { canMutate: canMutateAudit(membership?.role) };
+  });
+
 const FillCompetenciaInput = z.object({
   companyId: z.string().uuid(),
   transactionIds: z.array(z.string().uuid()).min(1).max(1000),
@@ -175,6 +194,7 @@ export const fillMissingCompetencia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => FillCompetenciaInput.parse(i))
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { data: rows, error: fetchErr } = await context.supabase
       .from("transactions")
       .select("id, date")
@@ -255,6 +275,7 @@ export const reassignCategory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => ReassignConfirmedInput.parse(i))
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { data: cat, error: catErr } = await context.supabase
       .from("categories")
       .select("id, kind, dre_line, is_balance_sheet")
@@ -304,6 +325,7 @@ export const deleteBulkTransactions = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     const { data: changed, error } = await context.supabase
       .from("transactions")
       .update({ deleted_at: new Date().toISOString() })
@@ -319,6 +341,7 @@ export const purgeImportedTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ companyId: z.string().uuid() }).parse(i))
   .handler(async ({ context, data }) => {
+    await requireAuditMutationRole(context.supabase, data.companyId, context.userId);
     // Delete transactions that have a fingerprint (indicating they were imported)
     // and belong to the company, but NOT those without fingerprints (manual).
     const { error, count } = await context.supabase
