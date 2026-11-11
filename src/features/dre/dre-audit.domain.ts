@@ -1,8 +1,10 @@
 import { isStoredDreLine } from "@/features/dre/dre-engine/dre-engine.domain";
+import { summarizeReviewSignals, type ReviewSignalSummary } from "./dre-review-signals.domain";
 
 export interface ClassificationGapRow {
   amount_cents: number;
   kind: "revenue" | "expense";
+  description?: string | null;
   category: {
     id: string;
     name: string;
@@ -18,6 +20,7 @@ export interface ClassificationGap {
   count: number;
   expenseCents: number;
   revenueCents: number;
+  reviewSignals: ReviewSignalSummary[];
 }
 
 /**
@@ -28,6 +31,7 @@ export function summarizeClassificationGaps(
   transactions: readonly ClassificationGapRow[],
 ): ClassificationGap[] {
   const groups = new Map<string, ClassificationGap>();
+  const groupRows = new Map<string, ClassificationGapRow[]>();
   for (const row of transactions) {
     if (row.category?.is_balance_sheet === true) continue;
     if (isStoredDreLine(row.category?.dre_line)) continue;
@@ -41,12 +45,19 @@ export function summarizeClassificationGaps(
         count: 0,
         expenseCents: 0,
         revenueCents: 0,
+        reviewSignals: [],
       };
       groups.set(key, group);
     }
+    const details = groupRows.get(key) ?? [];
+    details.push(row);
+    groupRows.set(key, details);
     group.count += 1;
     if (row.kind === "expense") group.expenseCents += row.amount_cents;
     else group.revenueCents += row.amount_cents;
+  }
+  for (const [key, group] of groups) {
+    group.reviewSignals = summarizeReviewSignals(groupRows.get(key) ?? []);
   }
   return [...groups.values()].sort(
     (a, b) =>
