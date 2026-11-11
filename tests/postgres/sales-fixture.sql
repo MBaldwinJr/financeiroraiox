@@ -51,6 +51,20 @@ $$;
 create trigger set_sales_updated_at before update on public.sales
 for each row execute function public.set_updated_at();
 
+-- Force a failure during the post-delete INSERT to test complete rollback.
+create function public.synthetic_fail_sales_insert() returns trigger
+language plpgsql set search_path = ''
+as $
+begin
+  if new.seller_name = 'ROLLBACK_TEST' then
+    raise exception 'synthetic insert failure' using errcode='P0001';
+  end if;
+  return new;
+end;
+$;
+create trigger synthetic_fail_sales_insert before insert on public.sales
+for each row execute function public.synthetic_fail_sales_insert();
+
 create function public.is_company_member(p_company uuid, p_user uuid) returns boolean
 language sql stable security definer set search_path = ''
 as $$
