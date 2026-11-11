@@ -1,4 +1,4 @@
-import { fetchAllRows } from "@/lib/supabase-paginate";
+import { fetchAllRows, fetchAllRowsConcurrent } from "@/lib/supabase-paginate";
 import { applyFinancialFilters, type FinancialFilters } from "@/lib/financial-filters";
 import type {
   ErpSaleRow,
@@ -13,7 +13,7 @@ import type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any;
 
-type PaginatedQuery<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+type PaginatedQuery<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null; count?: number | null }>;
 
 interface DateWindow extends FinancialFilters {
   companyId: string;
@@ -26,15 +26,17 @@ export function fetchYearTransactions(
   { companyId, start, end, ...filters }: DateWindow,
 ): Promise<TransactionRow[]> {
   // Exclui contas patrimoniais (Fornecedores, Empréstimos, Imobilizado) da DRE.
-  return fetchAllRows<TransactionRow>((from, to) =>
+  return fetchAllRowsConcurrent<TransactionRow>((from, to, withCount) =>
     applyFinancialFilters(
       supabase
       .from("transactions")
-      .select("date, competencia, amount_cents, kind, payment_method, category:categories(dre_group, dre_line, is_balance_sheet)")
+      .select("date, competencia, amount_cents, kind, payment_method, category:categories(dre_group, dre_line, is_balance_sheet)", withCount ? { count: "exact" } : undefined)
       .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("competencia", start)
-      .lt("competencia", end),
+      .lt("competencia", end)
+      .order("competencia", { ascending: true })
+      .order("id", { ascending: true }),
       filters,
     ).range(from, to) as PaginatedQuery<TransactionRow>,
   );
@@ -62,17 +64,19 @@ export function fetchPaidRevenue(
   supabase: SupabaseClient,
   { companyId, start, end, ...filters }: DateWindow,
 ): Promise<PaidRevenueRow[]> {
-  return fetchAllRows<PaidRevenueRow>((from, to) =>
+  return fetchAllRowsConcurrent<PaidRevenueRow>((from, to, withCount) =>
     applyFinancialFilters(
       supabase
       .from("transactions")
-      .select("paid_at, amount_cents, payment_method, category:categories(is_balance_sheet)")
+      .select("paid_at, amount_cents, payment_method, category:categories(is_balance_sheet)", withCount ? { count: "exact" } : undefined)
       .eq("company_id", companyId)
       .eq("kind", "revenue")
       .eq("status", "paid")
       .is("deleted_at", null)
       .gte("paid_at", start)
-      .lt("paid_at", end),
+      .lt("paid_at", end)
+      .order("paid_at", { ascending: true })
+      .order("id", { ascending: true }),
       filters,
     ).range(from, to) as PaginatedQuery<PaidRevenueRow>,
   );
@@ -82,17 +86,19 @@ export function fetchPaidExpenses(
   supabase: SupabaseClient,
   { companyId, start, end, ...filters }: DateWindow,
 ): Promise<PaidExpenseRow[]> {
-  return fetchAllRows<PaidExpenseRow>((from, to) =>
+  return fetchAllRowsConcurrent<PaidExpenseRow>((from, to, withCount) =>
     applyFinancialFilters(
       supabase
       .from("transactions")
-      .select("paid_at, amount_cents, category:categories(dre_group, is_balance_sheet)")
+      .select("paid_at, amount_cents, category:categories(dre_group, is_balance_sheet)", withCount ? { count: "exact" } : undefined)
       .eq("company_id", companyId)
       .eq("kind", "expense")
       .eq("status", "paid")
       .is("deleted_at", null)
       .gte("paid_at", start)
-      .lt("paid_at", end),
+      .lt("paid_at", end)
+      .order("paid_at", { ascending: true })
+      .order("id", { ascending: true }),
       filters,
     ).range(from, to) as PaginatedQuery<PaidExpenseRow>,
   );
@@ -102,14 +108,16 @@ export function fetchErpSales(
   supabase: SupabaseClient,
   { companyId, start, end, ...filters }: DateWindow,
 ): Promise<ErpSaleRow[]> {
-  return fetchAllRows<ErpSaleRow>((from, to) =>
+  return fetchAllRowsConcurrent<ErpSaleRow>((from, to, withCount) =>
     supabase
       .from("sales")
-      .select("period_start, net_amount_cents, returns_cents")
+      .select("period_start, net_amount_cents, returns_cents", withCount ? { count: "exact" } : undefined)
       .eq("company_id", companyId)
       .is("deleted_at", null)
       .gte("period_start", start)
       .lt("period_start", end)
+      .order("period_start", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, to) as PaginatedQuery<ErpSaleRow>,
   );
 }

@@ -1,9 +1,7 @@
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { FileSpreadsheet, FileText, Download } from "lucide-react";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 
 import { useCompanyStore } from "@/stores/company-store";
@@ -28,6 +26,8 @@ function useDre() {
     queryKey: ["financials", companyId, year, null, "accrual", filterKey],
     queryFn: () => fetcher({ data: { companyId: companyId!, year, month: null, basis: "accrual", ...filters } }),
     enabled: !!companyId,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -86,21 +86,19 @@ export function RelatoriosPage() {
   const filters = selectFinancialFilters(useFilterStore());
   const filterKey = financialFiltersKey(filters);
   const dreQ = useDre();
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const fetchTx = useServerFn(listAllTransactions);
-  const txQ = useQuery({
-    queryKey: ["report-transactions-all", companyId, year, filterKey],
-    queryFn: () =>
-      fetchTx({
-        data: { companyId: companyId!, year, month: null, ...filters },
-      }),
-    enabled: !!companyId,
-  });
-
-
-  const handleExcel = () => {
-    if (!dreQ.data) return;
-    const dre = buildDre(dreQ.data.monthly);
+  const handleExcel = async () => {
+    if (!dreQ.data || !companyId || exporting) return;
+    setExporting("excel");
+    try {
+      // Fetch detailed rows only on an explicit export, never on page entry.
+      const [XLSX, txData] = await Promise.all([
+        import("xlsx"),
+        fetchTx({ data: { companyId, year, month: null, ...filters } }),
+      ]);
+      const dre = buildDre(dreQ.data.monthly);
     const header = ["Linha", ...MONTH_LABELS, "Total"];
     const body = dre.map((r) => [r.label, ...r.values.map(fromCents), fromCents(r.total)]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
@@ -108,9 +106,9 @@ export function RelatoriosPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DRE");
 
-    if (txQ.data?.rows.length) {
+    if (txData.rows.length) {
       const txHeader = ["Data", "Descrição", "Tipo", "Categoria", "Valor (R$)"];
-      const txBody = txQ.data.rows.map((t) => [
+      const txBody = txData.rows.map((t) => [
         t.date,
         t.description,
         t.kind === "revenue" ? "Receita" : "Despesa",
@@ -130,10 +128,20 @@ export function RelatoriosPage() {
 
     XLSX.writeFile(wb, `relatorio-financeiro-${year}.xlsx`);
     toast.success("Excel gerado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao gerar Excel");
+    } finally {
+      setExporting(null);
+    }
   };
 
-  const handlePdf = () => {
-    if (!dreQ.data) return;
+  const handlePdf = async () => {
+    if (!dreQ.data || exporting) return;
+    setExporting("pdf");
+    try {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"), import("jspdf-autotable"),
+    ]);
     const dre = buildDre(dreQ.data.monthly);
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     doc.setFontSize(16);
@@ -163,6 +171,11 @@ export function RelatoriosPage() {
 
     doc.save(`relatorio-financeiro-${year}.pdf`);
     toast.success("PDF gerado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao gerar PDF");
+    } finally {
+      setExporting(null);
+    }
   };
 
   if (!companyId)
@@ -180,11 +193,11 @@ export function RelatoriosPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExcel} disabled={!dreQ.data}>
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
+          <Button variant="outline" onClick={handleExcel} disabled={!dreQ.data || exporting !== null}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> {exporting === "excel" ? "Gerando Excel…" : "Exportar Excel"}
           </Button>
-          <Button onClick={handlePdf} disabled={!dreQ.data}>
-            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+          <Button onClick={handlePdf} disabled={!dreQ.data || exporting !== null}>
+            <FileText className="mr-2 h-4 w-4" /> {exporting === "pdf" ? "Gerando PDF…" : "Exportar PDF"}
           </Button>
         </div>
       </header>

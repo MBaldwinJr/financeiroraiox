@@ -93,6 +93,9 @@ export function DashboardPage() {
     queryFn: () =>
       fetcher({ data: { companyId: companyId!, year: range.year, month: range.month, basis, ...filters } }),
     enabled: !!companyId,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const analyticsFetcher = useServerFn(getAnalytics);
@@ -101,6 +104,8 @@ export function DashboardPage() {
     queryFn: () =>
       analyticsFetcher({ data: { companyId: companyId!, year: range.year, month: range.month, ...filters } }),
     enabled: !!companyId && advancedOpen && !!query.data?.periodActivity.hasSelectedPeriodData,
+    staleTime: 120_000,
+    refetchOnWindowFocus: false,
   });
 
   if (!companyId) {
@@ -117,7 +122,20 @@ export function DashboardPage() {
   }
 
   if (query.isLoading || !query.data) {
-    return <div className="text-sm text-muted-foreground">Carregando dados financeiros…</div>;
+    return (
+      <div className="dashboard-premium min-h-[calc(100vh-8rem)] space-y-6 rounded-[28px] bg-[#f5f8fe] p-4 text-[#16243a] sm:p-6 lg:p-8">
+        <h1 className="text-2xl font-semibold">Visão Financeira</h1>
+        <FilterBar appearance="light" />
+        <div role="status" aria-live="polite" className="space-y-3">
+          <p className="text-sm text-slate-500">Carregando indicadores do período selecionado…</p>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div key={i} aria-hidden="true" className="h-28 animate-pulse rounded-2xl border border-slate-100 bg-white" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const { kpis, monthly, prevMonthly, byPayment, expenseComposition } = query.data;
@@ -148,6 +166,9 @@ export function DashboardPage() {
       </header>
 
       <FilterBar appearance="light" />
+      {query.isFetching && (
+        <p role="status" className="text-xs text-slate-500">Atualizando os indicadores…</p>
+      )}
 
       {!hasPeriodData && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-white px-5 py-4 text-[#294568] shadow-sm">

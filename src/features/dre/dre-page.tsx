@@ -53,6 +53,9 @@ export function DrePage() {
     queryKey: ["dre-matrix", companyId, range.year, filterKey],
     queryFn: () => fetcher({ data: { companyId: companyId!, year: range.year, ...filters } }),
     enabled: !!companyId,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   if (!companyId) return <p className="text-sm text-muted-foreground">Selecione uma empresa.</p>;

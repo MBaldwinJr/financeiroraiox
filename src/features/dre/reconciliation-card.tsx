@@ -26,7 +26,8 @@ export function DreReconciliationCard() {
         data: { companyId: companyId!, year: range.year, month: range.month, ...filters },
       }),
     enabled: !!companyId && expanded,
-    staleTime: 60_000,
+    staleTime: 90_000,
+    refetchOnWindowFocus: false,
   });
   const period = range.month ? `${MONTH_LABELS[range.month - 1]}/${range.year}` : String(range.year);
   const snapshot = query.data;
