@@ -90,9 +90,22 @@ def seed_memberships(db, identities):
         "('%s'::uuid,'%s'::uuid,'%s'::public.app_role)" % item
         for item in data
     )
+    # These identities are synthetic; the Auth user UUIDs come from local GoTrue.
+    sql = (
+        "insert into public.companies (id,name,owner_id) values "
+        "('%s'::uuid,'Empresa Sintética A','%s'::uuid),"
+        "('%s'::uuid,'Empresa Sintética B','%s'::uuid);" %
+        (COMPANY_A, identities["owner"][0], COMPANY_B, identities["foreign"][0])
+    )
+    sql += "insert into public.company_members(company_id,user_id,role) values " + values + ";"
+    sql += (
+        "insert into public.sales (company_id,period_start,period_end,seller_name,"
+        "net_amount_cents,cost_cents,source_file) values "
+        "('%s'::uuid,'2026-05-01','2026-05-31','Vendedor Sintético A',100000,60000,'synthetic-a.pdf'),"
+        "('%s'::uuid,'2026-05-01','2026-05-31','Vendedor Sintético B',90000,40000,'synthetic-b.pdf');"
+    ) % (COMPANY_A, COMPANY_B)
     subprocess.run(["psql", "-X", "-v", "ON_ERROR_STOP=1", "-q", db,
-        "-c", "insert into public.company_members (company_id,user_id,role) values " + values],
-        check=True, stdout=subprocess.DEVNULL)
+                    "-c", sql], check=True, stdout=subprocess.DEVNULL)
 
 def rpc(api, key, token, action, body):
     return http(api, key, "/rest/v1/rpc/" + action, "POST", token=token, payload=body)
@@ -108,6 +121,7 @@ def main(status_path):
     for relative in (
         "tests/supabase/sales-auth-fixture.sql",
         "docs/sql/SALES_MONTH_ATOMIC_REPLACE_HOMOLOGATION_DRAFT.sql",
+        "tests/supabase/sales-schema-contract.sql",
     ):
         command = ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1",
                    db, "-f", str(repo_root / relative)]

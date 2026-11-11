@@ -90,7 +90,7 @@ create policy "members write sales" on public.sales
 
 grant usage on schema public to authenticated, anon;
 grant select on public.company_members to authenticated;
-grant select, insert, update, delete on public.sales to authenticated;
+grant all privileges on table public.sales to authenticated, anon;
 
 -- Synthetic company A and B, with owner, admin, member and unrelated user.
 insert into public.companies (id) values
