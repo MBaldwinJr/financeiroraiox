@@ -7,17 +7,34 @@
 export function canRunSalesReplacementInStaging(
   enabled: string | undefined,
   environment: string | undefined,
+  activeSupabaseUrl: string | undefined,
+  approvedStagingSupabaseUrl: string | undefined,
 ): boolean {
-  return enabled === "true" && environment === "homologation";
+  if (enabled !== "true" || environment !== "homologation") return false;
+  if (!activeSupabaseUrl || !approvedStagingSupabaseUrl) return false;
+  try {
+    const active = new URL(activeSupabaseUrl);
+    const approved = new URL(approvedStagingSupabaseUrl);
+    return active.protocol === "https:" && approved.protocol === "https:"
+      && active.origin === approved.origin
+      && active.pathname === "/" && approved.pathname === "/"
+      && !active.username && !active.password && !approved.username && !approved.password;
+  } catch {
+    return false;
+  }
 }
 
 export function assertSalesReplacementInStaging(
   enabled: string | undefined,
   environment: string | undefined,
+  activeSupabaseUrl: string | undefined,
+  approvedStagingSupabaseUrl: string | undefined,
 ): void {
-  if (!canRunSalesReplacementInStaging(enabled, environment)) {
+  if (!canRunSalesReplacementInStaging(
+    enabled, environment, activeSupabaseUrl, approvedStagingSupabaseUrl,
+  )) {
     throw new Error(
-      "Substituição transacional desativada. Só é permitida em homologação com RPC auditada.",
+      "Substituição transacional desativada. Exige homologação, RPC auditada e URL do banco aprovada.",
     );
   }
 }
