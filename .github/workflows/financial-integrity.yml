@@ -27,6 +27,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Test financial domain
         run: bun run test:domain
+      - name: Test migration readiness manifest
+        run: python3 -m unittest discover -s tests/migration -p 'test_*.py' -v
       - name: Check TypeScript
         run: bunx tsc --noEmit
       - name: Build app
