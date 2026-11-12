@@ -1,0 +1,19 @@
+{
+  "tables": {
+    "companies": 0,
+    "company_members": 0,
+    "transactions": 0,
+    "sales": 0
+  },
+  "auth": {
+    "users": 0,
+    "identities": 0
+  },
+  "routines": [],
+  "extensions": [],
+  "jobs": [],
+  "storage": {
+    "buckets": 0,
+    "objects": 0
+  }
+}
