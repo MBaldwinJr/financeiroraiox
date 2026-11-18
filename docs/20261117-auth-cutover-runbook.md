@@ -38,3 +38,12 @@ Documentação oficial:
 
 ## Paridade pendente
 Quatro FKs referenciam Auth e só podem ser aplicadas depois de migrados os UUIDs: `companies.owner_id`, `company_invitations.invited_by`, `transactions.created_by`, `inventory_snapshots.created_by`.
+
+## Verificação do backup entregue em 18/11/2026
+- Arquivo recebido: `financeiroraiox_261118.backup.zip`.
+- Arquivo interno: `financeiroraiox_261118.backup`, PostgreSQL custom format `PGDMP v1.16`.
+- SHA-256 do ZIP: `8e273cf3648952ca13c1c9271a6d6c942a3e6e1be161e98d3b9ccd8182e878e1`.
+- Metadados do arquivo incluem `COPY auth.users` e `COPY auth.identities`. Não divulgar o conteúdo do backup, pois ele inclui informações privadas de autenticação.
+- Conferência de origem e destino no dia da entrega: 16.749 lançamentos e 166 vendas, com totais em centavos preservados; sem mudança de contagem e somas.
+- Para permitir execução local sem compartilhar o segredo do banco, foi preparado um script PowerShell de restauração seletiva (distribuição privada ao proprietário) que verifica o hash, exige destino Auth vazio, importa somente duas tabelas Auth via `pg_restore --single-transaction`, habilita 3 vínculos e testa as somas; o script não é executado no ambiente do ChatGPT.
+- **Cutover permanece NO-GO:** esta sessão não tem senha administrativa nem um mecanismo de importação de dump na conexão Supabase; não houve modificação de Auth ou variáveis de deploy. Exigir execução local autorizada, teste real de login e configuração Google/SMTP antes da liberação.
