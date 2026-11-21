@@ -1,0 +1,43 @@
+name: Vercel preview build (no deployment)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "vite.config.ts"
+      - "src/routes/auth.tsx"
+      - "src/integrations/supabase/**"
+      - "tests/vercel-preview.test.cjs"
+      - ".github/workflows/vercel-preview-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-vercel-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL: "1"
+      # No Supabase credentials are required to compile the app.
+      # Never provide service role credentials to pull-request jobs.
+    steps:
+      - name: Checkout untrusted PR without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820 # v4.4.0
+        with:
+          node-version: "24"
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Verify Vercel/OAuth contracts
+        run: node --test tests/vercel-preview.test.cjs
+      - name: Check TypeScript
+        run: bunx tsc --noEmit
+      - name: Build for Vercel without secrets
+        run: bun run build
