@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 import { PENDING_INVITE_STORAGE_KEY } from "@/features/company-members/invitation-token";
 
@@ -105,16 +104,18 @@ function AuthPage() {
             disabled={loading}
             onClick={async () => {
               setLoading(true);
-              const r = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: `${window.location.origin}/auth`,
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                  redirectTo: `${window.location.origin}/auth`,
+                },
               });
-              if (r.error) {
+              if (error) {
                 toast.error("Falha ao entrar com Google");
                 setLoading(false);
-                return;
               }
-              if (r.redirected) return;
-              goAfterAuth(navigate);
+              // Supabase redirects to the Google provider when successful.
+              // On return, the existing getUser effect routes the session.
             }}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
