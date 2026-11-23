@@ -1,0 +1,44 @@
+name: Refresh locked TanStack security patch
+
+on:
+  push:
+    branches:
+      - deploy/vercel-preview-20261121
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-security-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the isolated preview branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+          ref: deploy/vercel-preview-20261121
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Regenerate lockfile without running package lifecycle scripts
+        run: bun install --lockfile-only --ignore-scripts
+      - name: Check patched version in manifest and lockfile
+        run: |
+          node -e 'const p=require("./package.json"); if(p.dependencies["@tanstack/react-start"] !== "1.168.60") process.exit(1)'
+          grep -q '"@tanstack/react-start@1.168.60"' bun.lock
+          if grep -q '"@tanstack/start-server-core@1.167.22"' bun.lock; then
+            echo "Vulnerable server core remains locked"; exit 1
+          fi
+      - name: Commit lockfile change to preview branch only
+        run: |
+          if ! git diff --quiet -- bun.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add bun.lock
+            git commit -m "security(lock): resolve patched TanStack Start dependencies"
+            git push origin HEAD:refs/heads/deploy/vercel-preview-20261121
+          else
+            echo "No lockfile changes required"
+          fi
