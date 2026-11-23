@@ -57,3 +57,22 @@ Somente após validação e autorização de uma janela: congelar escrita no Lov
 - https://vercel.com/docs/frameworks/full-stack/tanstack-start
 - https://vercel.com/kb/guide/deploy-a-tanstack-start-app-to-vercel
 - https://supabase.com/docs/guides/auth/social-login/auth-google
+
+## Implantação de homologação verificada em 23/11/2026
+- Vercel team: `mauros-projects-3b40b93d`; projeto: `financeiro-raio-x-homolog`.
+- Vercel project ID: `prj_qu5JSoam7xY5gbCoZfgcv3CJh6W5`.
+- Deployment preview `dpl_8Rq8y9t5QBUH7hY3f2CRGFFzPYoY`: **READY**, `target=null` (Preview), atrás de Vercel Authentication/SSO.
+- URL pontual: `https://financeiro-raio-x-homolog-bodwyx5kf-mauros-projects-3b40b93d.vercel.app`
+- URL de branch informada pela Vercel: `https://financeiro-raio-x-homolog-git-d-1ae273-mauros-projects-3b40b93d.vercel.app` (confirmar o redirecionamento antes de usar em configuração OAuth).
+- Node 24, região `gru1`, framework `tanstack-start`, build `bun run build`, instalação `bun install --frozen-lockfile`.
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` foram configuradas **apenas para a branch Preview**, sem dados sensíveis no repositório.
+- `SUPABASE_SERVICE_ROLE_KEY` **não foi configurada** pela automação: configure diretamente na interface privada da Vercel, com alvo Preview e branch `deploy/vercel-preview-20261121`, antes de testar funções que exigem operações Admin do Supabase.
+- Google OAuth precisa de confirmação no projeto Supabase e configuração das URLs de retorno autorizadas para o endereço real de homologação.
+- Segurança: `@tanstack/react-start` 1.168.60, `@tanstack/react-router` 1.170.41 e `@tanstack/router-plugin` 1.168.42; transiente `@tanstack/start-server-core` 1.169.39, após correção de CVE-2026-102989. Não remover o bloqueio de segurança da Vercel nem inserir bypass.
+- CI do GitHub pós-lockfile sofreu `action_required` no commit do bot; um commit de documentação feito pelo usuário vinculado ao GitHub deve iniciar uma nova rodada de testes. Não confundir `READY` da Vercel com aprovação de testes funcionais.
+- Nenhuma alteração do site Lovable, domínio definitivo, supabase de origem ou merge em main.
+
+## Configuração OAuth no preview
+- Google Cloud → OAuth Client → Authorized redirect URI: `https://wamavqanocvollvjpahr.supabase.co/auth/v1/callback`
+- Supabase Primary → Authentication → URL Configuration → Redirect URLs: inserir URL de preview *exata* com `/auth`, além da URL atualmente utilizada pelo sistema, sem mudar o Site URL de produção antes do cutover.
+- Testar com as contas já restauradas no Supabase, evitando cadastro de usuários desnecessário.
